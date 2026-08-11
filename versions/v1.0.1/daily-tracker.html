@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>每日行动记录</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #1a1025;
+  color: #e8e0f0;
+  min-height: 100vh;
+  padding: 20px;
+}
+.container { max-width: 600px; margin: 0 auto; }
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.header-title { text-align: center; }
+.header-title h1 {
+  font-size: 1.3rem;
+  background: linear-gradient(135deg, #b37fdb, #d9b3ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.date-display {
+  text-align: center;
+  color: #9b8ab5;
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.stat-card {
+  background: #241835;
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+  border: 1px solid #3d2a54;
+}
+.stat-card .num { font-size: 1.4rem; font-weight: 700; color: #c084fc; }
+.stat-card .label { font-size: 0.7rem; color: #9b8ab5; margin-top: 4px; }
+
+.progress-bar {
+  height: 6px;
+  background: #2d1f44;
+  border-radius: 3px;
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #7c3aed, #a855f7);
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.goal-text {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #9b8ab5;
+  margin-bottom: 20px;
+}
+
+.add-form {
+  background: #241835;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 20px;
+  border: 1px solid #3d2a54;
+}
+.form-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+.form-row:last-child { margin-bottom: 0; }
+input, select {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #4a3660;
+  background: #1a1025;
+  color: #e8e0f0;
+  font-size: 0.9rem;
+  outline: none;
+}
+input:focus, select:focus { border-color: #a855f7; }
+input[type="text"] { flex: 2; }
+select { flex: 1; cursor: pointer; }
+.btn-add {
+  flex: 1;
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+.btn-add:active { opacity: 0.8; }
+
+/* 滚轮时间选择器 */
+.time-scroll-picker {
+  flex: 1;
+  height: 120px;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.time-picker-inner {
+  display: flex;
+  height: 100%;
+  position: relative;
+}
+.time-picker-col {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+}
+.time-picker-viewport {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 40px 0;
+}
+.time-picker-viewport::-webkit-scrollbar { display: none; }
+.time-picker-item {
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #4a3d5a;
+  scroll-snap-align: center;
+  transition: color 0.2s, opacity 0.2s;
+  pointer-events: none;
+}
+.time-picker-item.near { color: #6b5a7a; opacity: 0.6; }
+.time-picker-item.active { color: #e8e0f0; font-weight: 600; font-size: 1.4rem; }
+.time-picker-sep {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #c084fc;
+  align-self: center;
+  padding: 0 4px;
+}
+.time-picker-highlight {
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 40px;
+  margin-top: -20px;
+  border-top: 1px solid #7c3aed;
+  border-bottom: 1px solid #7c3aed;
+  pointer-events: none;
+  z-index: 2;
+}
+.time-picker-fade-top, .time-picker-fade-bottom {
+  position: absolute; left: 0; right: 0; height: 40px;
+  pointer-events: none; z-index: 1;
+}
+.time-picker-fade-top {
+  top: 0;
+  background: linear-gradient(to bottom, #241835 0%, transparent 100%);
+}
+.time-picker-fade-bottom {
+  bottom: 0;
+  background: linear-gradient(to top, #241835 0%, transparent 100%);
+}
+
+/* 活动列表 */
+.section-title {
+  font-size: 0.8rem; color: #9b8ab5;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.activity-list { display: flex; flex-direction: column; gap: 8px; }
+.activity-item {
+  background: #241835;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #3d2a54;
+  animation: slideIn 0.2s ease;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.activity-icon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; flex-shrink: 0;
+}
+.activity-info { flex: 1; min-width: 0; }
+.activity-name {
+  font-weight: 500; font-size: 0.9rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.activity-meta { font-size: 0.7rem; color: #9b8ab5; margin-top: 2px; }
+.activity-time {
+  font-weight: 600; color: #c084fc;
+  font-size: 0.85rem; white-space: nowrap; text-align: right;
+}
+.btn-delete {
+  background: none; border: none;
+  color: #6b5a7a; cursor: pointer;
+  font-size: 1rem; padding: 4px;
+  border-radius: 4px;
+}
+.btn-delete:active { color: #ef4444; }
+
+/* 数据管理 */
+.data-mgmt {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.btn-export, .btn-import {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #4a3660;
+  background: #1a1025;
+  color: #e8e0f0;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+.btn-export:active, .btn-import:active { border-color: #a855f7; }
+.empty {
+  text-align: center; color: #6b5a7a;
+  padding: 40px 0; font-size: 0.9rem;
+}
+
+.cat-study { background: #2d1f5e; }
+.cat-work { background: #1a3a2a; }
+.cat-exercise { background: #3d1a3d; }
+.cat-kid { background: #4a2a1a; }
+.cat-cook { background: #2a3a1a; }
+.cat-life { background: #3a2a1a; }
+.cat-other { background: #2a2a3a; }
+
+.date-nav {
+  display: flex; align-items: center; justify-content: center;
+  gap: 16px; margin-bottom: 16px;
+}
+.date-nav button {
+  background: #241835; border: 1px solid #3d2a54;
+  color: #e8e0f0; padding: 6px 14px;
+  border-radius: 8px; cursor: pointer; font-size: 0.85rem;
+}
+.date-nav button:active { border-color: #a855f7; }
+.date-nav span { font-weight: 500; min-width: 120px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-title">
+      <h1>每日行动记录</h1>
+    </div>
+  </div>
+  <div class="date-display" id="dateDisplay"></div>
+
+  <div class="date-nav">
+    <button onclick="changeDate(-1)">◀ 前一天</button>
+    <span id="currentDate"></span>
+    <button onclick="changeDate(1)">后一天 ▶</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="num" id="totalCount">0</div>
+      <div class="label">行动项</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="totalHours">0h</div>
+      <div class="label">总时长</div>
+    </div>
+      <div class="stat-card">
+        <div class="num" id="workHours">0h</div>
+        <div class="label">工作时长</div>
+      </div>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="goal-text" id="goalText">目标: 有效利用 8 小时</div>
+
+  <div class="add-form">
+    <div class="form-row">
+      <input type="text" id="actName" placeholder="做了什么..." maxlength="50">
+      <select id="actCategory">
+        <option value="study">📖 学习</option>
+        <option value="work">💼 工作/求职</option>
+        <option value="exercise">🏃 运动</option>
+        <option value="kid">👶 带娃</option>
+        <option value="cook">🍳 做饭</option>
+        <option value="life">🏠 生活</option>
+        <option value="other">📌 其他</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="time-scroll-picker" id="startPicker"></div>
+      <span style="color:#9b8ab5;align-self:center">至</span>
+      <div class="time-scroll-picker" id="endPicker"></div>
+      <button class="btn-add" onclick="addActivity()" style="flex:1">+ 添加记录</button>
+    </div>
+  </div>
+
+  <div class="section-title">数据管理</div>
+  <div class="data-mgmt">
+    <button class="btn-export" onclick="exportData()">📥 导出数据</button>
+    <label class="btn-import" for="importFile">📤 导入数据</label>
+    <input type="file" id="importFile" accept=".json" onchange="importData(event)" hidden>
+  </div>
+
+  <div class="section-title">今日记录</div>
+  <div class="activity-list" id="activityList"></div>
+</div>
+
+<script>
+const STORAGE_KEY = 'daily_tracker_data';
+const GOAL_HOURS = 8;
+const ITEM_HEIGHT = 40;
+let currentDate = new Date().toISOString().slice(0, 10);
+
+const categories = {
+  study: { name: '学习', icon: '📖', cls: 'cat-study' },
+  work: { name: '工作/求职', icon: '💼', cls: 'cat-work' },
+  exercise: { name: '运动', icon: '🏃', cls: 'cat-exercise' },
+  kid: { name: '带娃', icon: '👶', cls: 'cat-kid' },
+  cook: { name: '做饭', icon: '🍳', cls: 'cat-cook' },
+  life: { name: '生活', icon: '🏠', cls: 'cat-life' },
+  other: { name: '其他', icon: '📌', cls: 'cat-other' }
+};
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveData(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+function getDayData(date) { return loadData()[date] || []; }
+
+let beijingOffset = 8 * 60; // UTC+8 in minutes
+let now = new Date();
+let beijingTime = new Date(now.getTime() + (beijingOffset + now.getTimezoneOffset()) * 60000);
+let startH = beijingTime.getHours();
+let startM = beijingTime.getMinutes();
+let endTotalMin = startH * 60 + startM + 30;
+let endH = Math.floor(endTotalMin / 60) % 24;
+let endM = endTotalMin % 60;
+
+function addActivity() {
+  const name = document.getElementById('actName').value.trim();
+  const category = document.getElementById('actCategory').value;
+  if (!name) { alert('请输入做了什么'); return; }
+
+  const start = String(startH).padStart(2,'0') + ':' + String(startM).padStart(2,'0');
+  const end = String(endH).padStart(2,'0') + ':' + String(endM).padStart(2,'0');
+  const duration = (endH * 60 + endM) - (startH * 60 + startM);
+  if (duration <= 0) { alert('结束时间必须晚于开始时间'); return; }
+
+  const data = loadData();
+  if (!data[currentDate]) data[currentDate] = [];
+  data[currentDate].push({ id: Date.now(), name, duration, category, start, end });
+  saveData(data);
+  document.getElementById('actName').value = '';
+  render();
+}
+
+function deleteActivity(id) {
+  const data = loadData();
+  data[currentDate] = data[currentDate].filter(a => a.id !== id);
+  saveData(data);
+  render();
+}
+
+function changeDate(offset) {
+  const d = new Date(currentDate);
+  d.setDate(d.getDate() + offset);
+  currentDate = d.toISOString().slice(0, 10);
+  render();
+}
+
+function render() {
+  const activities = getDayData(currentDate);
+  const isToday = currentDate === new Date().toISOString().slice(0, 10);
+
+  const dateObj = new Date(currentDate);
+  const weekdays = ['周日','周一','周二','周三','周四','周五','周六'];
+  document.getElementById('currentDate').textContent =
+    `${dateObj.getMonth()+1}月${dateObj.getDate()}日 ${weekdays[dateObj.getDay()]}`;
+  document.getElementById('dateDisplay').textContent =
+    isToday ? '今天是 ' + new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+
+  const totalMin = activities.reduce((s, a) => s + a.duration, 0);
+  const studyMin = activities.filter(a => a.category === 'work' || a.category === 'study').reduce((s, a) => s + a.duration, 0);
+  document.getElementById('totalCount').textContent = activities.length;
+  document.getElementById('totalHours').textContent = (totalMin / 60).toFixed(1) + 'h';
+  document.getElementById('workHours').textContent = (studyMin / 60).toFixed(1) + 'h';
+
+  const pct = Math.min(100, (totalMin / 60 / GOAL_HOURS) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('goalText').textContent = `目标: 有效利用 ${GOAL_HOURS} 小时 | 已完成 ${pct.toFixed(0)}%`;
+
+  const list = document.getElementById('activityList');
+  if (activities.length === 0) {
+    list.innerHTML = '<div class="empty">今日事今日毕，早日住上大别墅 😊</div>';
+    return;
+  }
+  list.innerHTML = activities.map(a => {
+    const cat = categories[a.category];
+    return `<div class="activity-item">
+      <div class="activity-icon ${cat.cls}">${cat.icon}</div>
+      <div class="activity-info">
+        <div class="activity-name">${escapeHtml(a.name)}</div>
+        <div class="activity-meta">${cat.name}</div>
+      </div>
+      <div class="activity-time">${a.start}-${a.end}<br><span style="color:#9b8ab5;font-size:0.75rem">(${formatDuration(a.duration)})</span></div>
+      <button class="btn-delete" onclick="deleteActivity(${a.id})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function formatDuration(min) {
+  if (min >= 60) {
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return m > 0 ? `${h}小时${m}分钟` : `${h}小时`;
+  }
+  return `${min}分钟`;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ===== 滚轮时间选择器 =====
+function buildPicker(containerId, getH, getM, setH, setM) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+
+  const inner = document.createElement('div');
+  inner.className = 'time-picker-inner';
+
+  // 小时列
+  const hCol = document.createElement('div');
+  hCol.className = 'time-picker-col';
+  const hVP = document.createElement('div');
+  hVP.className = 'time-picker-viewport';
+  for (let i = 0; i < 24; i++) {
+    const item = document.createElement('div');
+    item.className = 'time-picker-item';
+    item.textContent = String(i).padStart(2, '0');
+    hVP.appendChild(item);
+  }
+  hCol.appendChild(hVP);
+
+  // 分钟列
+  const mCol = document.createElement('div');
+  mCol.className = 'time-picker-col';
+  const mVP = document.createElement('div');
+  mVP.className = 'time-picker-viewport';
+  for (let i = 0; i < 60; i++) {
+    const item = document.createElement('div');
+    item.className = 'time-picker-item';
+    item.textContent = String(i).padStart(2, '0');
+    mVP.appendChild(item);
+  }
+  mCol.appendChild(mVP);
+
+  inner.appendChild(hCol);
+  const sep = document.createElement('span');
+  sep.className = 'time-picker-sep';
+  sep.textContent = ':';
+  inner.appendChild(sep);
+  inner.appendChild(mCol);
+
+  // 选中指示器
+  const highlight = document.createElement('div');
+  highlight.className = 'time-picker-highlight';
+  inner.appendChild(highlight);
+
+  // 渐变遮罩
+  const fadeTop = document.createElement('div');
+  fadeTop.className = 'time-picker-fade-top';
+  const fadeBottom = document.createElement('div');
+  fadeBottom.className = 'time-picker-fade-bottom';
+  inner.appendChild(fadeTop);
+  inner.appendChild(fadeBottom);
+
+  container.appendChild(inner);
+
+  function highlightItems(vp, val) {
+    const items = vp.children;
+    for (let i = 0; i < items.length; i++) {
+      items[i].className = 'time-picker-item';
+      if (i === val) items[i].classList.add('active');
+      else if (Math.abs(i - val) === 1) items[i].classList.add('near');
+    }
+  }
+
+  function update() {
+    const h = getH(), m = getM();
+    hVP.scrollTop = h * ITEM_HEIGHT;
+    mVP.scrollTop = m * ITEM_HEIGHT;
+    highlightItems(hVP, h);
+    highlightItems(mVP, m);
+  }
+
+  let scrollTimer = null;
+  function onScroll(vp, isHour) {
+    if (scrollTimer) clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      const v = Math.round(vp.scrollTop / ITEM_HEIGHT);
+      const h = getH(), m = getM();
+      if (isHour) {
+        if (v >= 0 && v < 24) setH(v);
+      } else {
+        if (v >= 0 && v < 60) setM(v);
+      }
+      update();
+      renderTime();
+    }, 80);
+  }
+
+  hVP.addEventListener('scroll', () => onScroll(hVP, true));
+  mVP.addEventListener('scroll', () => onScroll(mVP, false));
+
+  // 鼠标滚轮
+  container.addEventListener('wheel', e => {
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const isLeft = x < rect.width / 2;
+    const delta = e.deltaY > 0 ? 1 : -1;
+    const h = getH(), m = getM();
+    if (isLeft) {
+      setH((h + delta + 24) % 24);
+    } else {
+      setM((m + delta + 60) % 60);
+    }
+    update();
+    renderTime();
+    e.preventDefault();
+  }, { passive: false });
+
+  update();
+}
+
+// 导出数据
+function exportData() {
+  const data = loadData();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `daily-tracker-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// 导入数据
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (typeof data === 'object' && data !== null) {
+        saveData(data);
+        render();
+        alert('数据导入成功！');
+      } else {
+        alert('文件格式不正确');
+      }
+    } catch {
+      alert('文件解析失败，请确认是有效的 JSON 文件');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function renderTime() {
+  // 仅触发重新渲染，不做其他事
+}
+
+function renderAllPickers() {
+  buildPicker('startPicker',
+    () => startH, () => startM,
+    v => { startH = v; }, v => { startM = v; }
+  );
+  buildPicker('endPicker',
+    () => endH, () => endM,
+    v => { endH = v; }, v => { endM = v; }
+  );
+}
+
+renderAllPickers();
+render();
+</script>
+</body>
+</html>
