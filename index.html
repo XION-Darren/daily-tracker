@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#7c3aed">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="行动记录">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <title>每日行动记录</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -444,6 +452,43 @@ select { flex: 1; cursor: pointer; }
 }
 .date-nav button:active { border-color: #a855f7; }
 .date-nav span { font-weight: 500; min-width: 120px; text-align: center; }
+
+/* 小屏适配：压缩输入框与下拉框，避免溢出 */
+@media (max-width: 420px) {
+  body { padding: 12px; }
+  .form-row { gap: 6px; }
+  input, select { padding: 8px 8px; font-size: 0.82rem; }
+  .btn-add { padding: 8px; font-size: 0.82rem; }
+  .time-picker-item { height: 34px; line-height: 34px; font-size: 1.1rem; }
+  .time-scroll-picker { height: 100px; }
+  .time-picker-viewport { padding: 33px 0; }
+  .stat-card { padding: 10px 4px; }
+  .stat-card .num { font-size: 1rem; }
+  .stat-card .label { font-size: 0.6rem; }
+  .date-nav { gap: 8px; }
+  .date-nav span { min-width: 100px; }
+}
+
+/* 超窄屏（手机竖屏）：表单第一行改为可换行，二级下拉不被挤出屏幕 */
+@media (max-width: 480px) {
+  .add-form .form-row:first-child {
+    flex-wrap: wrap;
+  }
+  .add-form .form-row:first-child input[type="text"] {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .add-form .form-row:first-child select {
+    flex: 1 1 calc(50% - 3px);
+    min-width: 0;
+    padding: 8px 6px;
+    font-size: 0.8rem;
+  }
+  select { max-width: 100%; }
+  .form-row { flex-wrap: wrap; }
+  .form-row .time-scroll-picker { flex: 1 1 calc(50% - 8px); min-width: 120px; }
+  .form-row .btn-add { flex: 1 1 100%; }
+}
 </style>
 </head>
 <body>
@@ -547,7 +592,7 @@ const ITEM_HEIGHT = 40;
 let currentDate = new Date().toISOString().slice(0, 10);
 
 const categories = {
-  work: { name: '工作', icon: '💼', cls: 'cat-work', subs: { job: '求职', research: '研究', other: '其它' } },
+  work: { name: '工作', icon: '💼', cls: 'cat-work', subs: { research: '研究', job: '求职', other: '其它' } },
   exercise: { name: '运动', icon: '🏃', cls: 'cat-exercise', subs: { walk: '快走', strength: '力量', other: '其它' } },
   study: { name: '学习', icon: '📖', cls: 'cat-study', subs: { ai: 'AI', energy: '能源', startup: '创业', finance: '理财', other: '其它' } },
   life: { name: '生活', icon: '🏠', cls: 'cat-life', subs: { food: '美食', chore: '家务', shopping: '逛街', other: '其它' } },
@@ -987,6 +1032,7 @@ const GIST_ID_KEY = 'daily_tracker_gist_id';
 const GIST_TOKEN_KEY = 'daily_tracker_gist_token';
 const SYNC_FILE = 'daily-tracker-data.json';
 let pushTimer = null;
+let lastSyncTime = 0;
 
 function getGistConfig() {
   return {
@@ -1113,6 +1159,17 @@ async function syncToCloud(silent) {
   }
 }
 
+// A方案：页面从后台切回前台时自动拉取云端数据
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    const now = Date.now();
+    if (now - lastSyncTime > 10000) {
+      lastSyncTime = now;
+      syncFromCloud(true);
+    }
+  }
+});
+
 let calYear, calMonth;
 function renderCalendar(dateStr) {
   calYear = parseInt(dateStr.split('-')[0]);
@@ -1229,6 +1286,15 @@ renderAllPickers();
 loadSyncConfigIntoUI();
 render();
 syncFromCloud(true);
+
+// PWA：注册 Service Worker（安装到桌面 / 离线可用）
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => {
+      console.log('SW register failed:', err);
+    });
+  });
+}
 </script>
 </body>
 </html>
