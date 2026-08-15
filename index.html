@@ -147,6 +147,14 @@ body {
   padding: 12px 8px;
   text-align: center;
   border: 1px solid #3d2a54;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.stat-card:active { background: #2a1c40; }
+.stat-card.active {
+  border-color: #c084fc;
+  background: #2d1f44;
+  box-shadow: 0 0 0 1px #c084fc;
 }
 .stat-card .stat-icon { font-size: 1rem; margin-bottom: 4px; }
 .stat-card .num { font-size: 1.15rem; font-weight: 700; color: #c084fc; }
@@ -486,7 +494,6 @@ select { flex: 1; cursor: pointer; }
   }
   select { max-width: 100%; }
   .form-row { flex-wrap: wrap; }
-  .form-row .time-scroll-picker { flex: 1 1 calc(50% - 8px); min-width: 120px; }
   .form-row .btn-add { flex: 1 1 100%; }
 }
 </style>
@@ -514,22 +521,22 @@ select { flex: 1; cursor: pointer; }
   </div>
 
   <div class="stats">
-    <div class="stat-card">
+    <div class="stat-card" onclick="setFilter(null)" id="cardAll">
       <div class="stat-icon">📋</div>
       <div class="num" id="totalCount">0</div>
       <div class="label">行动项</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" onclick="setFilter('sleep')" id="cardSleep">
       <div class="stat-icon">😴</div>
       <div class="num" id="sleepHours">0h</div>
       <div class="label">睡觉时长</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" onclick="setFilter('top')" id="cardTop">
       <div class="stat-icon" id="topIcon">🏃</div>
       <div class="num" id="topHours">0h</div>
       <div class="label" id="topLabel">时长最高</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" onclick="setFilter('work')" id="cardWork">
       <div class="stat-icon">💼</div>
       <div class="num" id="workHours">0h</div>
       <div class="label">工作时长</div>
@@ -632,6 +639,7 @@ function initStartTimes() {
 let startH, startM, endH, endM;
 let editingId = null;
 let listExpanded = false;
+let activeFilter = null;
 initStartTimes();
 
 function renderSubCategories() {
@@ -763,6 +771,30 @@ function changeDate(offset) {
   render();
 }
 
+// 状态栏过滤：点击卡片显示对应记录
+function getFilterLabel(filter) {
+  if (filter === 'sleep') return '😴 睡觉时长';
+  if (filter === 'work') return '💼 工作时长';
+  if (filter === 'top') return getTopCategoryName();
+  return null;
+}
+
+function getTopCategoryName() {
+  const activities = getDayData(currentDate);
+  const topCats = ['exercise', 'study', 'life', 'kid'];
+  const topRanks = topCats.map(k => ({
+    key: k,
+    min: activities.filter(a => a.category === k).reduce((s, a) => s + a.duration, 0)
+  })).sort((x, y) => y.min - x.min);
+  const top = topRanks[0];
+  return (top && top.min > 0) ? categories[top.key].name : null;
+}
+
+function setFilter(filter) {
+  activeFilter = (activeFilter === filter) ? null : filter;
+  render();
+}
+
 function render() {
   const activities = getDayData(currentDate);
   const isToday = currentDate === new Date().toISOString().slice(0, 10);
@@ -812,11 +844,40 @@ function render() {
   document.getElementById('goalText').textContent = `有效工作 ${GOAL_HOURS} 小时 | 已完成 ${pct.toFixed(0)}%`;
 
   const list = document.getElementById('activityList');
-  if (activities.length === 0) {
-    list.innerHTML = '<div class="empty">今日事今日毕，早日住上大别墅 😊</div>';
+
+  // 状态栏高亮
+  document.getElementById('cardAll').classList.toggle('active', activeFilter === null);
+  document.getElementById('cardSleep').classList.toggle('active', activeFilter === 'sleep');
+  document.getElementById('cardWork').classList.toggle('active', activeFilter === 'work');
+  document.getElementById('cardTop').classList.toggle('active', activeFilter === 'top');
+
+  // 应用过滤
+  let shown = activities;
+  const filterLabel = getFilterLabel(activeFilter);
+  if (activeFilter === 'sleep') {
+    shown = activities.filter(a => a.category === 'rest' && a.sub === 'sleep');
+  } else if (activeFilter === 'work') {
+    shown = activities.filter(a => a.category === 'work');
+  } else if (activeFilter === 'top') {
+    const topCats = ['exercise', 'study', 'life', 'kid'];
+    const topRanks = topCats.map(k => ({
+      key: k,
+      min: activities.filter(a => a.category === k).reduce((s, a) => s + a.duration, 0)
+    })).sort((x, y) => y.min - x.min);
+    const top = topRanks[0];
+    if (top && top.min > 0) shown = activities.filter(a => a.category === top.key);
+  }
+
+  const sectionTitle = document.querySelector('.section-title');
+  sectionTitle.textContent = filterLabel ? `今日记录 · ${filterLabel}` : '今日记录';
+
+  if (shown.length === 0) {
+    list.innerHTML = filterLabel
+      ? '<div class="empty">该分类今天还没有记录</div>'
+      : '<div class="empty">今日事今日毕，早日住上大别墅 😊</div>';
     return;
   }
-  const sorted = activities.slice().sort((a, b) => a.start.localeCompare(b.start));
+  const sorted = shown.slice().sort((a, b) => a.start.localeCompare(b.start));
   const MAX_VISIBLE = 7;
   const hidden = listExpanded ? [] : sorted.slice(MAX_VISIBLE);
   const visible = listExpanded ? sorted : sorted.slice(0, MAX_VISIBLE);
