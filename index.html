@@ -467,9 +467,6 @@ select { flex: 1; cursor: pointer; }
   .form-row { gap: 6px; }
   input, select { padding: 8px 8px; font-size: 0.82rem; }
   .btn-add { padding: 8px; font-size: 0.82rem; }
-  .time-picker-item { height: 34px; line-height: 34px; font-size: 1.1rem; }
-  .time-scroll-picker { height: 100px; }
-  .time-picker-viewport { padding: 33px 0; }
   .stat-card { padding: 10px 4px; }
   .stat-card .num { font-size: 1rem; }
   .stat-card .label { font-size: 0.6rem; }
@@ -985,10 +982,15 @@ function buildPicker(containerId, getH, getM, setH, setM) {
     }
   }
 
+  // 实际 item 高度（跟随 CSS，避免手机端压缩后错位）
+  function getItemH(vp) {
+    return (vp.children[0] && vp.children[0].offsetHeight) || ITEM_HEIGHT;
+  }
+
   function update() {
     const h = getH(), m = getM();
-    hVP.scrollTop = h * ITEM_HEIGHT;
-    mVP.scrollTop = m * ITEM_HEIGHT;
+    hVP.scrollTop = h * getItemH(hVP);
+    mVP.scrollTop = m * getItemH(mVP);
     highlightItems(hVP, h);
     highlightItems(mVP, m);
   }
@@ -997,7 +999,8 @@ function buildPicker(containerId, getH, getM, setH, setM) {
   function onScroll(vp, isHour) {
     if (scrollTimer) clearTimeout(scrollTimer);
     scrollTimer = setTimeout(() => {
-      const v = Math.round(vp.scrollTop / ITEM_HEIGHT);
+      const ih = getItemH(vp);
+      const v = Math.round(vp.scrollTop / ih);
       const h = getH(), m = getM();
       if (isHour) {
         if (v >= 0 && v < 24) setH(v);
