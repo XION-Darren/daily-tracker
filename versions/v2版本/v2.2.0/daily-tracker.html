@@ -1,0 +1,1984 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#7c3aed">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="行动记录">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>每日行动记录</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #1a1025;
+  color: #e8e0f0;
+  min-height: 100vh;
+  padding: 20px;
+}
+.container { max-width: 600px; margin: 0 auto; }
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.header-title { text-align: center; }
+.header-title h1 {
+  font-size: 1.3rem;
+  background: linear-gradient(135deg, #b37fdb, #d9b3ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.date-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  text-align: center;
+  color: #9b8ab5;
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+  position: relative;
+  cursor: pointer;
+}
+
+/* 日期旁边的天气小标签 */
+.weather-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #241835;
+  border: 1px solid #3d2a54;
+  color: #cbbcdf;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.weather-chip:hover { border-color: #6b4f8f; }
+.weather-chip:active { border-color: #a855f7; background: #2a1c40; }
+.weather-chip .w-ico { font-size: 0.9rem; line-height: 1; }
+.weather-chip .w-temp { color: #e8e0f0; font-weight: 600; }
+.weather-chip.muted { color: #7d6c94; }
+.calendar-popup {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #241835;
+  border: 1px solid #3d2a54;
+  border-radius: 10px;
+  padding: 10px;
+  z-index: 100;
+  min-width: 240px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  display: none;
+}
+.date-display:hover .calendar-popup,
+.date-display:focus-within .calendar-popup,
+.calendar-popup:hover {
+  display: block;
+}
+/* 鼠标停在天气标签上时不要弹出日历 */
+.date-display:has(.weather-chip:hover) .calendar-popup { display: none; }
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: #c084fc;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.cal-nav {
+  cursor: pointer;
+  padding: 0 8px;
+  font-size: 1rem;
+  color: #9b8ab5;
+  user-select: none;
+}
+.cal-nav:hover { color: #fff; }
+.cal-ym {
+  cursor: pointer;
+  padding: 0 4px;
+}
+.cal-ym:hover { color: #fff; }
+.cal-ym-picker {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1025;
+  border: 1px solid #3d2a54;
+  border-radius: 8px;
+  padding: 8px;
+  z-index: 200;
+  width: 140px;
+  max-height: 180px;
+  overflow-y: auto;
+  display: none;
+  text-align: center;
+}
+.cal-ym-picker.show { display: block; }
+.cal-ym-item {
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #9b8ab5;
+}
+.cal-ym-item:hover { background: #3d2a54; color: #fff; }
+.cal-ym-item.current { color: #c084fc; font-weight: 600; }
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  text-align: center;
+}
+.calendar-grid .weekday {
+  color: #9b8ab5;
+  font-size: 0.7rem;
+  padding: 4px 0;
+}
+.calendar-grid .day {
+  font-size: 0.8rem;
+  padding: 4px 0;
+  border-radius: 4px;
+  color: #9b8ab5;
+  cursor: pointer;
+}
+.calendar-grid .day:hover { background: #3d2a54; color: #fff; }
+.calendar-grid .day.today { background: #7c3aed; color: #fff; font-weight: 600; }
+.calendar-grid .day.has-data { color: #c084fc; font-weight: 500; }
+.calendar-grid .day.empty { cursor: default; color: transparent; }
+
+.progress-bar {
+  height: 6px;
+  background: #2d1f44;
+  border-radius: 3px;
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #7c3aed, #a855f7);
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.goal-text {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #9b8ab5;
+  margin-bottom: 20px;
+}
+
+.add-form {
+  background: #241835;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 20px;
+  border: 1px solid #3d2a54;
+}
+.form-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+.form-row:last-child { margin-bottom: 0; }
+input, select, textarea {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #4a3660;
+  background: #1a1025;
+  color: #e8e0f0;
+  font-size: 0.9rem;
+  outline: none;
+}
+input:focus, select:focus, textarea:focus { border-color: #a855f7; }
+input[type="text"] { flex: 2; }
+select { flex: 1; cursor: pointer; }
+.name-input {
+  width: 100%;
+  min-height: 42px;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+/* 每日总结 */
+.summary-card {
+  background: #241835;
+  border: 1px solid #3d2a54;
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 16px;
+}
+.summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.summary-title {
+  font-size: 0.8rem;
+  color: #c084fc;
+  letter-spacing: 1px;
+}
+.btn-regen {
+  background: #1a1025;
+  border: 1px solid #4a3660;
+  color: #9b8ab5;
+  font-size: 0.72rem;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.btn-regen:active { border-color: #a855f7; color: #c084fc; }
+.summary-text {
+  width: 100%;
+  min-height: 96px;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.7;
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+.summary-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 0.65rem;
+  color: #6b5a7a;
+}
+.btn-add {
+  flex: 1;
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+.btn-add:active { opacity: 0.8; }
+.btn-add-editing { background: linear-gradient(135deg, #a855f7, #ec4899); }
+
+/* 滚轮时间选择器 */
+.time-scroll-picker {
+  flex: 1;
+  height: 120px;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.time-picker-inner {
+  display: flex;
+  height: 100%;
+  position: relative;
+}
+.time-picker-col {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+}
+.time-picker-viewport {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 40px 0;
+}
+.time-picker-viewport::-webkit-scrollbar { display: none; }
+.time-picker-item {
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #4a3d5a;
+  scroll-snap-align: center;
+  transition: color 0.2s, opacity 0.2s;
+  pointer-events: none;
+}
+.time-picker-item.near { color: #6b5a7a; opacity: 0.6; }
+.time-picker-item.active { color: #e8e0f0; font-weight: 600; font-size: 1.4rem; }
+.time-picker-sep {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #c084fc;
+  align-self: center;
+  padding: 0 4px;
+}
+.time-picker-highlight {
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 40px;
+  margin-top: -20px;
+  border-top: 1px solid #7c3aed;
+  border-bottom: 1px solid #7c3aed;
+  pointer-events: none;
+  z-index: 2;
+}
+.time-picker-fade-top, .time-picker-fade-bottom {
+  position: absolute; left: 0; right: 0; height: 40px;
+  pointer-events: none; z-index: 1;
+}
+.time-picker-fade-top {
+  top: 0;
+  background: linear-gradient(to bottom, #241835 0%, transparent 100%);
+}
+.time-picker-fade-bottom {
+  bottom: 0;
+  background: linear-gradient(to top, #241835 0%, transparent 100%);
+}
+
+/* 活动列表 */
+.section-title {
+  font-size: 0.8rem; color: #9b8ab5;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.activity-list { display: flex; flex-direction: column; gap: 8px; }
+.activity-item {
+  background: #241835;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #3d2a54;
+  animation: slideIn 0.2s ease;
+}
+.activity-item.editing {
+  border-color: #c084fc;
+  box-shadow: 0 0 0 1px #c084fc;
+}
+.activity-item:hover { cursor: pointer; background: #2a1c40; }
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.activity-icon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; flex-shrink: 0;
+}
+.activity-info { flex: 1; min-width: 0; }
+.activity-name {
+  font-weight: 500; font-size: 0.9rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.activity-meta { font-size: 0.7rem; color: #9b8ab5; margin-top: 2px; }
+.activity-time {
+  font-weight: 600; color: #c084fc;
+  font-size: 0.85rem; white-space: nowrap; text-align: right;
+}
+.btn-delete {
+  background: none; border: none;
+  color: #6b5a7a; cursor: pointer;
+  font-size: 1rem; padding: 4px;
+  border-radius: 4px;
+}
+.btn-delete:active { color: #ef4444; }
+.btn-toggle-more {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 4px;
+  border-radius: 8px;
+  border: 1px dashed #4a3660;
+  background: #1a1025;
+  color: #9b8ab5;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.btn-toggle-more:hover { border-color: #a855f7; color: #c084fc; }
+
+/* 数据管理 */
+.data-mgmt {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.btn-export, .btn-import {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #4a3660;
+  background: #1a1025;
+  color: #e8e0f0;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+.btn-export:active, .btn-import:active { border-color: #a855f7; }
+
+/* 云同步 */
+.sync-box {
+  background: #241835;
+  border: 1px solid #3d2a54;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sync-status {
+  font-size: 0.75rem;
+  color: #c084fc;
+  background: #1a1025;
+  border-radius: 6px;
+  padding: 6px 10px;
+  text-align: center;
+}
+.sync-status.error { color: #f87171; }
+.sync-status.ok { color: #4ade80; }
+.sync-tip { font-size: 0.65rem; color: #6b5a7a; line-height: 1.5; }
+
+/* 设置与数据折叠面板 */
+.settings-panel {
+  margin-top: 24px;
+  border-top: 1px solid #3d2a54;
+  padding-top: 10px;
+}
+.settings-panel summary {
+  cursor: pointer;
+  font-size: 0.7rem;
+  color: #6b5a7a;
+  padding: 6px 0;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.settings-panel summary::-webkit-details-marker { display: none; }
+.settings-panel summary::before { content: '▶'; font-size: 0.55rem; transition: transform 0.2s; }
+.settings-panel[open] summary::before { transform: rotate(90deg); }
+.settings-panel[open] summary { color: #9b8ab5; }
+.settings-body { margin-top: 12px; animation: slideIn 0.2s ease; }
+.sub-title {
+  font-size: 0.72rem;
+  color: #9b8ab5;
+  margin: 12px 0 8px;
+  padding-left: 8px;
+  border-left: 2px solid #7c3aed;
+}
+.sub-title:first-of-type { margin-top: 0; }
+.data-mgmt { display: flex; gap: 10px; margin-bottom: 0; }
+.empty {
+  text-align: center; color: #6b5a7a;
+  padding: 40px 0; font-size: 0.9rem;
+}
+
+.cat-study { background: #2d1f5e; }
+.cat-work { background: #1a3a2a; }
+.cat-exercise { background: #3d1a3d; }
+.cat-kid { background: #4a2a1a; }
+.cat-life { background: #3a2a1a; }
+.cat-rest { background: #2a2a3a; }
+.cat-other { background: #2a2a3a; }
+
+.date-nav {
+  display: flex; align-items: center; justify-content: center;
+  gap: 16px; margin-bottom: 16px;
+}
+.date-nav button {
+  background: #241835; border: 1px solid #3d2a54;
+  color: #e8e0f0; padding: 6px 14px;
+  border-radius: 8px; cursor: pointer; font-size: 0.85rem;
+}
+.date-nav button:active { border-color: #a855f7; }
+.date-nav span { font-weight: 500; min-width: 120px; text-align: center; }
+
+/* 小屏适配：压缩输入框与下拉框，避免溢出 */
+@media (max-width: 420px) {
+  body { padding: 12px; }
+  .form-row { gap: 6px; }
+  input, select { padding: 8px 8px; font-size: 0.82rem; }
+  .btn-add { padding: 8px; font-size: 0.82rem; }
+  .date-nav { gap: 8px; }
+  .date-nav span { min-width: 100px; }
+}
+
+/* 超窄屏（手机竖屏）：表单第一行改为可换行，二级下拉不被挤出屏幕 */
+@media (max-width: 480px) {
+  .add-form .form-row:first-child {
+    flex-wrap: wrap;
+  }
+  .add-form .form-row:first-child input[type="text"] {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .add-form .form-row:first-child select {
+    flex: 1 1 calc(50% - 3px);
+    min-width: 0;
+    padding: 8px 6px;
+    font-size: 0.8rem;
+  }
+  select { max-width: 100%; }
+  .form-row { flex-wrap: wrap; }
+  .form-row .btn-add { flex: 1 1 100%; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-title">
+      <h1>每日行动记录</h1>
+    </div>
+  </div>
+  <div class="date-display" id="dateDisplay">
+    <span class="date-text" id="dateText"></span>
+    <span class="weather-chip muted" id="weatherChip" title="点击刷新天气" onclick="onWeatherChipClick(event)"><span class="w-ico">🌡</span><span class="w-txt">天气</span></span>
+    <div class="calendar-popup">
+      <div class="calendar-header" id="calHeader"></div>
+      <div class="calendar-grid" id="calGrid"></div>
+      <div class="cal-ym-picker" id="calYearPicker"></div>
+      <div class="cal-ym-picker" id="calMonthPicker"></div>
+    </div>
+  </div>
+
+  <div class="date-nav">
+    <button onclick="changeDate(-1)">◀ 前一天</button>
+    <span id="currentDate"></span>
+    <button onclick="changeDate(1)">后一天 ▶</button>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="goal-text" id="goalText">有效工作 8 小时</div>
+
+  <div class="add-form" id="addForm">
+    <div class="form-row">
+      <textarea id="actName" class="name-input" rows="1" placeholder="做了什么...（可不填，字数不限）"></textarea>
+    </div>
+    <div class="form-row">
+      <select id="actCategory" onchange="renderSubCategories()"></select>
+      <select id="actSub"></select>
+    </div>
+    <div class="form-row">
+      <div class="time-scroll-picker" id="startPicker"></div>
+      <span style="color:#9b8ab5;align-self:center">至</span>
+      <div class="time-scroll-picker" id="endPicker"></div>
+      <button class="btn-add" id="btnAdd" onclick="addActivity()" style="flex:1">+ 添加记录</button>
+    </div>
+  </div>
+
+  <div class="section-title">今日记录</div>
+  <div class="activity-list" id="activityList"></div>
+
+  <div class="summary-card">
+    <div class="summary-head">
+      <span class="summary-title">今日小结</span>
+      <button class="btn-regen" onclick="regenSummary()">重新生成</button>
+    </div>
+    <textarea id="summaryText" class="summary-text" rows="4" placeholder="记录完事项后会自动生成小结，也可以自己写。"></textarea>
+    <div class="summary-foot">
+      <span id="summaryMeta">自动生成 · 可直接修改</span>
+      <span id="summaryCount">0 字</span>
+    </div>
+  </div>
+
+  <details class="settings-panel">
+    <summary>⚙️ 设置与数据</summary>
+    <div class="settings-body">
+      <div class="sub-title">本地数据</div>
+      <div class="data-mgmt">
+        <button class="btn-export" onclick="exportData()">📥 导出数据</button>
+        <label class="btn-import" for="importFile">📤 导入数据</label>
+        <input type="file" id="importFile" accept=".json" onchange="importData(event)" hidden>
+      </div>
+      <div class="sub-title">天气地点</div>
+      <div class="form-row">
+        <input type="text" id="weatherCity" placeholder="城市名，如 南京" style="flex:1">
+        <button class="btn-export" onclick="saveWeatherCity()" style="white-space:nowrap">保存</button>
+        <button class="btn-export" onclick="useGeoLocation()" style="white-space:nowrap">定位</button>
+      </div>
+      <div class="sync-tip" id="weatherTip">天气来自 Open-Meteo，不需要 Key。不填城市则优先用系统定位，定位不可用时默认南京。</div>
+      <div class="sub-title">云同步（GitHub Gist）</div>
+      <div class="sync-box">
+        <div class="sync-status" id="syncStatus">未配置 · 所有改动仅保存在本设备</div>
+        <div class="form-row">
+          <input type="text" id="gistId" placeholder="Gist ID" style="flex:1">
+        </div>
+        <div class="form-row">
+          <input type="password" id="gistToken" placeholder="Token（只拉取可不填，推送需填）" style="flex:1">
+        </div>
+        <div class="form-row">
+          <button class="btn-export" onclick="saveSyncConfig()">保存配置</button>
+          <button class="btn-export" onclick="syncFromCloud(false)">从云端拉取</button>
+          <button class="btn-export" onclick="syncToCloud(false)">推送到云端</button>
+        </div>
+        <div class="sync-tip">打开页面自动拉取云端数据；每 3 秒自动推送一次改动。Token 只保存在本设备浏览器中，请用最小权限（gist 范围）。</div>
+      </div>
+    </div>
+  </details>
+</div>
+
+<script>
+const STORAGE_KEY = 'daily_tracker_data';
+const SUMMARY_KEY = 'daily_tracker_summary';
+const GOAL_HOURS = 8;
+const ITEM_HEIGHT = 40;
+let currentDate = new Date().toISOString().slice(0, 10);
+
+const categories = {
+  work: { name: '工作', icon: '💼', cls: 'cat-work', subs: { office: '上班', trip: '出差', social: '应酬', meeting: '会议', research: '研究' } },
+  life: { name: '生活', icon: '🏠', cls: 'cat-life', subs: { food: '美食', chore: '家务', leisure: '休闲', kid: '带娃', other: '其它' } },
+  exercise: { name: '运动', icon: '🏃', cls: 'cat-exercise', subs: { jog: '慢跑', walk: '快走', strength: '力量', stroll: '散步' } },
+  rest: { name: '休息', icon: '😴', cls: 'cat-rest', subs: { sleep: '睡觉', fun: '娱乐' } }
+};
+
+// 旧版分类：只用于把已有记录显示完整，不再出现在新增下拉里
+const LEGACY_CATS = {
+  study: { name: '学习', icon: '📖', cls: 'cat-study', subs: { ai: 'AI', energy: '能源', startup: '创业', finance: '理财', other: '其它' } },
+  kid: { name: '带娃', icon: '👶', cls: 'cat-kid', subs: { learn: '学习', fun: '娱乐', other: '其它' } }
+};
+const LEGACY_SUBS = { job: '求职', shopping: '逛街', other: '其它' };
+
+function catInfo(key) { return categories[key] || LEGACY_CATS[key] || null; }
+function subNameOf(catKey, subKey) {
+  const c = catInfo(catKey);
+  if (c && c.subs && subKey && c.subs[subKey]) return c.subs[subKey];
+  return (subKey && LEGACY_SUBS[subKey]) || '';
+}
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  schedulePush();
+}
+function getDayData(date) { return loadData()[date] || []; }
+
+// 每日小结：独立存储，不影响原有记录结构
+function loadSummaries() {
+  try { return JSON.parse(localStorage.getItem(SUMMARY_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveSummaries(s) {
+  localStorage.setItem(SUMMARY_KEY, JSON.stringify(s));
+  schedulePush();
+}
+
+/* =========================================================
+   天气（Open-Meteo，无需 Key）
+   存储：daily_tracker_weather
+   { place:{lat,lon,name}, days:{ 'YYYY-MM-DD': {...} }, updatedAt }
+   ========================================================= */
+const WEATHER_KEY = 'daily_tracker_weather';
+const DEFAULT_PLACE = { lat: 32.0603, lon: 118.7969, name: '南京' };
+
+const WMO = {
+  0: ['晴', '☀️'], 1: ['大致晴朗', '🌤'], 2: ['多云', '⛅'], 3: ['阴', '☁️'],
+  45: ['雾', '🌫'], 48: ['雾凇', '🌫'],
+  51: ['小毛毛雨', '🌦'], 53: ['毛毛雨', '🌦'], 55: ['浓毛毛雨', '🌦'],
+  56: ['冻毛毛雨', '🌧'], 57: ['强冻毛毛雨', '🌧'],
+  61: ['小雨', '🌦'], 63: ['中雨', '🌧'], 65: ['大雨', '🌧'],
+  66: ['冻雨', '🌧'], 67: ['强冻雨', '🌧'],
+  71: ['小雪', '🌨'], 73: ['中雪', '🌨'], 75: ['大雪', '❄️'], 77: ['雪粒', '🌨'],
+  80: ['阵雨', '🌦'], 81: ['强阵雨', '🌧'], 82: ['暴雨', '⛈'],
+  85: ['阵雪', '🌨'], 86: ['强阵雪', '❄️'],
+  95: ['雷阵雨', '⛈'], 96: ['雷暴伴冰雹', '⛈'], 99: ['强雷暴伴冰雹', '⛈']
+};
+function wmoInfo(code) { return WMO[code] || ['未知', '🌡']; }
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function loadWeatherStore() {
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(WEATHER_KEY) || 'null'); } catch { s = null; }
+  if (!s || typeof s !== 'object') s = {};
+  if (!s.days || typeof s.days !== 'object') s.days = {};
+  if (!s.place || typeof s.place !== 'object') s.place = null;
+  return s;
+}
+function saveWeatherStore(s) {
+  localStorage.setItem(WEATHER_KEY, JSON.stringify(s));
+}
+
+let weatherFetching = false;
+let weatherFailed = false;
+
+async function resolvePlace(store) {
+  if (store.place && store.place.lat && store.place.lon) return store.place;
+  try {
+    if (navigator.geolocation) {
+      const pos = await new Promise((res, rej) =>
+        navigator.geolocation.getCurrentPosition(res, rej, { timeout: 6000, maximumAge: 600000 })
+      );
+      const place = {
+        lat: Number(pos.coords.latitude.toFixed(4)),
+        lon: Number(pos.coords.longitude.toFixed(4)),
+        name: '当前位置'
+      };
+      const s = loadWeatherStore();
+      s.place = place;
+      saveWeatherStore(s);
+      return place;
+    }
+  } catch (e) { /* 定位不可用就用默认城市 */ }
+  return DEFAULT_PLACE;
+}
+
+async function fetchWeather(force) {
+  if (weatherFetching) return;
+  const store = loadWeatherStore();
+  const fresh = store.updatedAt && (Date.now() - store.updatedAt < 20 * 60 * 1000);
+  if (!force && fresh && store.days[todayStr()]) { renderWeather(); return; }
+  weatherFetching = true;
+  weatherFailed = false;
+  const chip = document.getElementById('weatherChip');
+  if (chip) chip.title = '正在获取天气…';
+  const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), 9000) : null;
+  try {
+    const place = await resolvePlace(store);
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + place.lat +
+      '&longitude=' + place.lon +
+      '&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,weather_code' +
+      '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max' +
+      '&timezone=Asia%2FShanghai&past_days=31&forecast_days=3';
+    const resp = await fetch(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const j = await resp.json();
+    const daily = j.daily || {};
+    const times = daily.time || [];
+    const s2 = loadWeatherStore();
+    const now = Date.now();
+    times.forEach((d, i) => {
+      const code = daily.weather_code ? daily.weather_code[i] : null;
+      const info = wmoInfo(code);
+      const old = s2.days[d] || {};
+      s2.days[d] = {
+        code: code,
+        text: info[0],
+        icon: info[1],
+        tmax: daily.temperature_2m_max ? daily.temperature_2m_max[i] : null,
+        tmin: daily.temperature_2m_min ? daily.temperature_2m_min[i] : null,
+        precip: daily.precipitation_sum ? daily.precipitation_sum[i] : null,
+        wind: daily.wind_speed_10m_max ? daily.wind_speed_10m_max[i] : null,
+        place: place.name,
+        temp: old.temp != null ? old.temp : null,
+        fetchedAt: now
+      };
+    });
+    const t = todayStr();
+    if (j.current && s2.days[t]) {
+      s2.days[t].temp = j.current.temperature_2m;
+      s2.days[t].humidity = j.current.relative_humidity_2m;
+      s2.days[t].feels = j.current.apparent_temperature;
+      s2.days[t].icon = wmoInfo(j.current.weather_code)[1];
+      s2.days[t].text = wmoInfo(j.current.weather_code)[0];
+    }
+    s2.place = place;
+    s2.updatedAt = now;
+    saveWeatherStore(s2);
+  } catch (e) {
+    /* 离线或接口不可用：保留已有缓存，不打扰用户 */
+    weatherFailed = true;
+  } finally {
+    if (timer) clearTimeout(timer);
+    weatherFetching = false;
+    renderWeather();
+  }
+}
+
+function weatherForDate(dateStr) {
+  const s = loadWeatherStore();
+  return s.days[dateStr] || null;
+}
+
+function renderWeather() {
+  const chip = document.getElementById('weatherChip');
+  if (!chip) return;
+  const isToday = currentDate === todayStr();
+  const w = weatherForDate(currentDate);
+  if (!w) {
+    chip.className = 'weather-chip muted';
+    let label = '无天气记录';
+    if (isToday) label = weatherFailed ? '天气 —' : '天气获取中';
+    chip.innerHTML = '<span class="w-ico">🌡</span><span class="w-txt">' + label + '</span>';
+    chip.title = weatherFailed
+      ? '网络不通或接口不可用，点击重试'
+      : (isToday ? '点击重新获取天气' : '这一天没有天气记录');
+    return;
+  }
+  const ico = w.icon || wmoInfo(w.code)[1];
+  let main = '';
+  if (isToday && w.temp != null) {
+    main = Math.round(w.temp) + '°';
+  } else if (w.tmin != null && w.tmax != null) {
+    main = Math.round(w.tmin) + '°~' + Math.round(w.tmax) + '°';
+  } else if (w.temp != null) {
+    main = Math.round(w.temp) + '°';
+  } else {
+    main = '—';
+  }
+  chip.className = 'weather-chip';
+  chip.innerHTML = '<span class="w-ico">' + ico + '</span>' +
+    '<span class="w-txt">' + escapeHtml(main) + '</span>';
+  const bits = [w.text || ''];
+  if (w.tmin != null && w.tmax != null) bits.push('全天 ' + Math.round(w.tmin) + '°~' + Math.round(w.tmax) + '°');
+  if (w.temp != null) bits.push('当前 ' + Math.round(w.temp) + '°');
+  if (w.humidity != null) bits.push('湿度 ' + Math.round(w.humidity) + '%');
+  if (w.wind != null) bits.push('风 ' + Math.round(w.wind) + ' km/h');
+  if (w.place) bits.push(w.place);
+  bits.push('点击刷新');
+  chip.title = bits.filter(Boolean).join(' · ');
+}
+
+function onWeatherChipClick(e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  fetchWeather(true);
+}
+
+async function saveWeatherCity() {
+  const input = document.getElementById('weatherCity');
+  const tip = document.getElementById('weatherTip');
+  const raw = (input.value || '').trim();
+  if (!raw) { if (tip) tip.textContent = '请输入城市名，或用系统定位自动识别。'; return; }
+  if (tip) tip.textContent = '正在查询「' + raw + '」…';
+  try {
+    const url = 'https://geocoding-api.open-meteo.com/v1/search?name=' +
+      encodeURIComponent(raw) + '&count=1&language=zh&format=json';
+    const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const tm = ctrl ? setTimeout(() => ctrl.abort(), 9000) : null;
+    const r = await fetch(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined });
+    const j = await r.json();
+    if (tm) clearTimeout(tm);
+    const hit = (j.results || [])[0];
+    if (!hit) { if (tip) tip.textContent = '没找到这个城市，换个写法试试（如「南京」「Nanjing」）。'; return; }
+    const store = loadWeatherStore();
+    store.place = { lat: hit.latitude, lon: hit.longitude, name: hit.name };
+    store.updatedAt = 0;
+    saveWeatherStore(store);
+    if (tip) tip.textContent = '已设为「' + hit.name + '」，正在刷新天气…';
+    await fetchWeather(true);
+    if (tip) tip.textContent = '当前地点：' + hit.name +
+      (hit.admin1 ? '（' + hit.admin1 + '）' : '') + '，天气已更新。';
+  } catch (err) {
+    if (tip) tip.textContent = '查询失败，检查网络后重试。';
+  }
+}
+
+async function useGeoLocation() {
+  const tip = document.getElementById('weatherTip');
+  try {
+    const pos = await new Promise((res, rej) =>
+      navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 })
+    );
+    const store = loadWeatherStore();
+    store.place = {
+      lat: Number(pos.coords.latitude.toFixed(4)),
+      lon: Number(pos.coords.longitude.toFixed(4)),
+      name: '当前位置'
+    };
+    store.updatedAt = 0;
+    saveWeatherStore(store);
+    if (tip) tip.textContent = '已使用系统定位，正在刷新天气…';
+    await fetchWeather(true);
+    if (tip) tip.textContent = '天气已按定位更新。';
+  } catch (err) {
+    if (tip) tip.textContent = '定位不可用（浏览器可能拒绝了定位权限），请直接填城市名。';
+  }
+}
+
+/* =========================================================
+   旧数据迁移：把历史版本存过的数据合并回当前结构
+   1) 记录主键一直是 daily_tracker_data，这里再兜底合并其它历史键
+   2) v3 版的天气/小结存在 daily_tracker_meta，搬回各自的位置
+   3) v3 的多时段记录（segs）补算时长，避免总时长算错
+   ========================================================= */
+function toMinutes(t) {
+  const p = String(t || '').split(':');
+  const h = parseInt(p[0], 10), m = parseInt(p[1], 10);
+  if (isNaN(h) || isNaN(m)) return 0;
+  return h * 60 + m;
+}
+function segMinutes(segs) {
+  if (!Array.isArray(segs)) return 0;
+  return segs.reduce((s, seg) => {
+    if (!seg) return s;
+    const a = Array.isArray(seg) ? seg[0] : seg.start;
+    const b = Array.isArray(seg) ? seg[1] : seg.end;
+    let d = toMinutes(b) - toMinutes(a);
+    if (d < 0) d += 24 * 60;
+    return s + (d > 0 ? d : 0);
+  }, 0);
+}
+
+function migrateLegacyStores() {
+  let touched = false;
+
+  // 1) 记录：合并其它可能的历史键（旧版或手工备份留下的）
+  const main = loadData();
+  ['daily_tracker_data_backup', 'dailyTrackerData', 'daily-tracker-data', 'dt_data'].forEach(k => {
+    let alt = null;
+    try { alt = JSON.parse(localStorage.getItem(k) || 'null'); } catch { alt = null; }
+    if (!alt || typeof alt !== 'object' || Array.isArray(alt)) return;
+    Object.keys(alt).forEach(d => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !Array.isArray(alt[d])) return;
+      if (!Array.isArray(main[d])) { main[d] = alt[d]; touched = true; return; }
+      const ids = new Set(main[d].map(r => r && r.id));
+      alt[d].forEach(r => {
+        if (!r || (r.id != null && ids.has(r.id))) return;
+        main[d].push(r);
+        if (r.id != null) ids.add(r.id);
+        touched = true;
+      });
+    });
+  });
+
+  // 3) 多时段记录补时长
+  Object.keys(main).forEach(d => {
+    if (!Array.isArray(main[d])) return;
+    main[d].forEach(r => {
+      if (!r || !Array.isArray(r.segs) || !r.segs.length) return;
+      const sum = segMinutes(r.segs);
+      if (sum > 0 && Number(r.duration) !== sum) { r.duration = sum; touched = true; }
+    });
+  });
+  if (touched) localStorage.setItem(STORAGE_KEY, JSON.stringify(main));
+
+  // 2) 历史 meta：小结与天气
+  let meta = null;
+  try { meta = JSON.parse(localStorage.getItem('daily_tracker_meta') || 'null'); } catch { meta = null; }
+  if (meta && typeof meta === 'object') {
+    const sums = loadSummaries();
+    let sc = false;
+    const oldSums = meta.summaries || {};
+    Object.keys(oldSums).forEach(d => {
+      const s = oldSums[d];
+      if (!s || !s.text || sums[d]) return;
+      sums[d] = { text: s.text, edited: !!s.edited, updatedAt: s.updatedAt || Date.now() };
+      sc = true;
+    });
+    if (sc) localStorage.setItem(SUMMARY_KEY, JSON.stringify(sums));
+
+    const ws = loadWeatherStore();
+    let wc = false;
+    const oldW = meta.weather || {};
+    Object.keys(oldW).forEach(d => {
+      if (!oldW[d] || ws.days[d]) return;
+      ws.days[d] = oldW[d];
+      wc = true;
+    });
+    if (meta.settings && meta.settings.lat && meta.settings.lon && !ws.place) {
+      ws.place = {
+        lat: meta.settings.lat,
+        lon: meta.settings.lon,
+        name: meta.settings.name || '当前位置'
+      };
+      wc = true;
+    }
+    if (wc) saveWeatherStore(ws);
+  }
+
+  if (touched) schedulePush();
+}
+
+let beijingOffset = 8 * 60; // UTC+8 in minutes
+let now = new Date();
+let beijingTime = new Date(now.getTime() + (beijingOffset + now.getTimezoneOffset()) * 60000);
+function initStartTimes() {
+  const dayActs = getDayData(currentDate);
+  const sortedActs = dayActs.slice().sort((a, b) => a.end.localeCompare(b.end));
+  const lastAct = sortedActs.length > 0 ? sortedActs[sortedActs.length - 1] : null;
+  if (lastAct) {
+    const parts = lastAct.end.split(':');
+    startH = parseInt(parts[0]);
+    startM = parseInt(parts[1]);
+  } else {
+    startH = beijingTime.getHours();
+    startM = beijingTime.getMinutes();
+  }
+  const endTotalMin = startH * 60 + startM + 30;
+  endH = Math.floor(endTotalMin / 60) % 24;
+  endM = endTotalMin % 60;
+}
+let startH, startM, endH, endM;
+let editingId = null;
+let listExpanded = false;
+initStartTimes();
+
+function renderSubCategories(keepSub) {
+  const catSel = document.getElementById('actCategory');
+  const subSel = document.getElementById('actSub');
+  const catKey = catSel.value;
+  const cat = catInfo(catKey);
+  const prev = keepSub || subSel.value;
+  subSel.innerHTML = '';
+  if (!cat) return;
+  Object.keys(cat.subs).forEach(subKey => {
+    const opt = document.createElement('option');
+    opt.value = subKey;
+    opt.textContent = `${cat.icon} ${cat.subs[subKey]}`;
+    subSel.appendChild(opt);
+  });
+  // 编辑旧记录时，原二级已不在新目录里，临时补一个选项，保存后清理
+  if (keepSub && !cat.subs[keepSub]) {
+    const opt = document.createElement('option');
+    opt.value = keepSub;
+    opt.textContent = `${cat.icon} ${subNameOf(catKey, keepSub) || '其它'}（旧）`;
+    opt.dataset.temp = '1';
+    subSel.appendChild(opt);
+  }
+  if (prev) subSel.value = prev;
+  if (!subSel.value && subSel.options.length) subSel.selectedIndex = 0;
+}
+
+// 编辑旧分类记录时，把已下架的一级临时加回下拉
+function setCategoryForEdit(catKey, subKey) {
+  const catSel = document.getElementById('actCategory');
+  if (!categories[catKey]) {
+    const info = LEGACY_CATS[catKey] || { icon: '📌', name: catKey };
+    const opt = document.createElement('option');
+    opt.value = catKey;
+    opt.textContent = `${info.icon} ${info.name}（旧）`;
+    opt.dataset.temp = '1';
+    catSel.appendChild(opt);
+  }
+  catSel.value = catKey;
+  renderSubCategories(subKey);
+}
+
+// 清理临时选项；当前选中的是临时项时，回到第一个新分类
+function clearTempCategories() {
+  const catSel = document.getElementById('actCategory');
+  const temps = Array.prototype.slice.call(catSel.querySelectorAll('option[data-temp="1"]'));
+  if (!temps.length) return;
+  const wasSelected = temps.some(o => o.selected);
+  temps.forEach(o => o.remove());
+  if (wasSelected || !categories[catSel.value]) {
+    catSel.value = Object.keys(categories)[0];
+    renderSubCategories();
+  }
+}
+
+function renderAllCategorySelects() {
+  const catSel = document.getElementById('actCategory');
+  catSel.innerHTML = '';
+  Object.keys(categories).forEach(key => {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = `${categories[key].icon} ${categories[key].name}`;
+    catSel.appendChild(opt);
+  });
+  renderSubCategories();
+}
+
+function addActivity() {
+  const name = document.getElementById('actName').value.trim();
+  const category = document.getElementById('actCategory').value;
+  const sub = document.getElementById('actSub').value;
+
+  const start = String(startH).padStart(2,'0') + ':' + String(startM).padStart(2,'0');
+  const end = String(endH).padStart(2,'0') + ':' + String(endM).padStart(2,'0');
+  const duration = (endH * 60 + endM) - (startH * 60 + startM);
+  if (duration <= 0) { alert('结束时间必须晚于开始时间'); return; }
+
+  const data = loadData();
+  if (!data[currentDate]) data[currentDate] = [];
+  if (editingId !== null) {
+    const idx = data[currentDate].findIndex(a => a.id === editingId);
+    if (idx !== -1) {
+      const old = data[currentDate][idx];
+      const rec = { ...old, name, category, sub, start, end, duration };
+      // 老版多时段记录：时间没动就保留分段和原时长，动了才当成单段
+      if (Array.isArray(old.segs) && old.segs.length && old.start === start && old.end === end) {
+        rec.segs = old.segs;
+        rec.duration = segMinutes(old.segs) || duration;
+      } else {
+        delete rec.segs;
+      }
+      data[currentDate][idx] = rec;
+    }
+    editingId = null;
+    document.getElementById('btnAdd').textContent = '+ 添加记录';
+    document.getElementById('btnAdd').classList.remove('btn-add-editing');
+  } else {
+    data[currentDate].push({ id: Date.now(), name, duration, category, sub, start, end });
+  }
+  saveData(data);
+  const nameEl = document.getElementById('actName');
+  nameEl.value = '';
+  autoGrow(nameEl);
+  clearTempCategories();
+  initStartTimes();
+  renderAllPickers();
+  render();
+}
+
+function editActivity(id) {
+  const act = getDayData(currentDate).find(a => a.id === id);
+  if (!act) return;
+  editingId = id;
+  const nameEl = document.getElementById('actName');
+  nameEl.value = act.name || '';
+  autoGrow(nameEl);
+  setCategoryForEdit(act.category, act.sub || '');
+  const [sh, sm] = (act.start || '00:00').split(':').map(Number);
+  const [eh, em] = (act.end || '00:00').split(':').map(Number);
+  startH = sh; startM = sm; endH = eh; endM = em;
+  renderAllPickers();
+  document.getElementById('btnAdd').textContent = '✓ 保存修改';
+  document.getElementById('btnAdd').classList.add('btn-add-editing');
+  document.getElementById('btnAdd').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  render();
+}
+
+function cancelEdit() {
+  if (editingId === null) return;
+  editingId = null;
+  const nameEl = document.getElementById('actName');
+  nameEl.value = '';
+  autoGrow(nameEl);
+  clearTempCategories();
+  document.getElementById('btnAdd').textContent = '+ 添加记录';
+  document.getElementById('btnAdd').classList.remove('btn-add-editing');
+  initStartTimes();
+  renderAllPickers();
+  render();
+}
+
+document.addEventListener('click', e => {
+  if (editingId === null) return;
+  if (e.target.closest('#addForm')) return;
+  if (e.target.closest('.activity-item')) return;
+  cancelEdit();
+});
+
+let downX = 0, downY = 0, downTime = 0;
+document.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  downX = e.clientX; downY = e.clientY; downTime = Date.now();
+});
+document.addEventListener('mouseup', e => {
+  if (e.button !== 0) return;
+  const item = e.target.closest('.activity-item');
+  if (!item) return;
+  if (e.target.closest('.btn-delete')) return;
+  const dist = Math.hypot(e.clientX - downX, e.clientY - downY);
+  const dt = Date.now() - downTime;
+  if (dist > 5 || dt > 500) return;
+  editActivity(Number(item.dataset.id));
+});
+
+function deleteActivity(id) {
+  const data = loadData();
+  data[currentDate] = data[currentDate].filter(a => a.id !== id);
+  saveData(data);
+  render();
+}
+
+function changeDate(offset) {
+  const d = new Date(currentDate);
+  d.setDate(d.getDate() + offset);
+  currentDate = d.toISOString().slice(0, 10);
+  initStartTimes();
+  renderAllPickers();
+  render();
+}
+
+function render() {
+  const activities = getDayData(currentDate);
+  const isToday = currentDate === new Date().toISOString().slice(0, 10);
+
+  const dateObj = new Date(currentDate);
+  const weekdays = ['周日','周一','周二','周三','周四','周五','周六'];
+  document.getElementById('currentDate').textContent =
+    `${dateObj.getMonth()+1}月${dateObj.getDate()}日 ${weekdays[dateObj.getDay()]}`;
+  document.getElementById('dateText').textContent = isToday
+    ? '今天是 ' + new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+    : `${dateObj.getFullYear()}年${dateObj.getMonth()+1}月${dateObj.getDate()}日`;
+  renderWeather();
+  renderCalendar(currentDate);
+
+  const workMin = activities.filter(a => a.category === 'work').reduce((s, a) => s + a.duration, 0);
+  const pct = Math.min(100, (workMin / 60 / GOAL_HOURS) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('goalText').textContent = `有效工作 ${GOAL_HOURS} 小时 | 已完成 ${pct.toFixed(0)}%`;
+
+  const list = document.getElementById('activityList');
+
+  if (activities.length === 0) {
+    list.innerHTML = '<div class="empty">今日事今日毕，早日住上大别墅 😊</div>';
+    syncSummaryAuto();
+    return;
+  }
+  const sorted = activities.slice().sort((a, b) => String(a.start || '').localeCompare(String(b.start || '')));
+  const MAX_VISIBLE = 7;
+  const hidden = listExpanded ? [] : sorted.slice(MAX_VISIBLE);
+  const visible = listExpanded ? sorted : sorted.slice(0, MAX_VISIBLE);
+  list.innerHTML = visible.map(a => {
+    const cat = catInfo(a.category);
+    const subName = subNameOf(a.category, a.sub);
+    const metaName = cat ? (subName ? `${cat.name}（${subName}）` : cat.name) : (a.category || '其它');
+    // 名称为空时，用二级分类名当标题
+    const title = (a.name && a.name.trim()) ? a.name : (subName || (cat ? cat.name : '未填写'));
+    const isEditing = editingId === a.id;
+    return `<div class="activity-item${isEditing ? ' editing' : ''}" data-id="${a.id}">
+      <div class="activity-icon ${cat ? cat.cls : 'cat-other'}">${cat ? cat.icon : '📌'}</div>
+      <div class="activity-info">
+        <div class="activity-name">${escapeHtml(title)}</div>
+        <div class="activity-meta">${escapeHtml(metaName)}</div>
+      </div>
+      <div class="activity-time">${actTimeLabel(a)}<br><span style="color:#9b8ab5;font-size:0.75rem">(${formatDuration(a.duration)})</span></div>
+      <button class="btn-delete" onclick="event.stopPropagation();deleteActivity(${a.id})">✕</button>
+    </div>`;
+  }).join('');
+  if (hidden.length > 0) {
+    const more = document.createElement('button');
+    more.className = 'btn-toggle-more';
+    more.textContent = listExpanded ? '收起 ▲' : `展开全部（${hidden.length} 项）▼`;
+    more.onclick = () => { listExpanded = !listExpanded; render(); };
+    list.appendChild(more);
+  }
+  syncSummaryAuto();
+}
+
+/* ===== 每日小结 ===== */
+function fmtLong(min) {
+  min = Math.max(0, Math.round(min || 0));
+  const h = Math.floor(min / 60), m = min % 60;
+  if (h && m) return `${h} 小时 ${m} 分`;
+  if (h) return `${h} 小时`;
+  return `${m} 分`;
+}
+
+function buildSummary(date) {
+  const acts = getDayData(date).slice().sort((a, b) =>
+    String(a.start || '').localeCompare(String(b.start || ''))
+  );
+  if (!acts.length) return '';
+
+  const total = acts.reduce((s, a) => s + (a.duration || 0), 0);
+  const firstStart = acts.reduce((p, a) => (a.start && a.start < p) ? a.start : p, acts[0].start || '');
+  const lastEnd = acts.reduce((p, a) => (a.end && a.end > p) ? a.end : p, acts[0].end || '');
+
+  const lines = [];
+  lines.push(`今天共记录 ${acts.length} 项事项，累计 ${fmtLong(total)}，时间从 ${firstStart} 到 ${lastEnd}。`);
+
+  // 分类与二级明细（只列有记录的）
+  const order = ['work', 'life', 'exercise', 'rest', 'study', 'kid'];
+  const catParts = [];
+  order.forEach(k => {
+    const list = acts.filter(a => a.category === k);
+    if (!list.length) return;
+    const min = list.reduce((s, a) => s + (a.duration || 0), 0);
+    const subMap = {};
+    list.forEach(a => {
+      const key = a.sub || '_';
+      subMap[key] = (subMap[key] || 0) + (a.duration || 0);
+    });
+    const subArr = Object.keys(subMap)
+      .map(key => ({ name: subNameOf(k, key === '_' ? '' : key) || '其它', min: subMap[key] }))
+      .sort((x, y) => y.min - x.min);
+    const subText = subArr.length > 1
+      ? `（${subArr.map(s => `${s.name} ${fmtLong(s.min)}`).join('、')}）`
+      : '';
+    const catName = catInfo(k) ? catInfo(k).name : k;
+    catParts.push(`${catName} ${fmtLong(min)}${subText}`);
+  });
+  // 不在新目录里的旧分类
+  const otherMap = {};
+  acts.filter(a => order.indexOf(a.category) === -1).forEach(a => {
+    otherMap[a.category] = (otherMap[a.category] || 0) + (a.duration || 0);
+  });
+  Object.keys(otherMap).forEach(k => {
+    const info = catInfo(k);
+    catParts.push(`${info ? info.name : k} ${fmtLong(otherMap[k])}`);
+  });
+  if (catParts.length) lines.push(`按类别看：${catParts.join('；')}。`);
+
+  // 事项先后顺序
+  const seqLimit = 10;
+  const seq = acts.slice(0, seqLimit).map(a => {
+    const label = (a.name && a.name.trim()) ? a.name : (subNameOf(a.category, a.sub) || '未填写');
+    return `${label}（${a.start}-${a.end}）`;
+  });
+  lines.push(`先后做了：${seq.join('；')}${acts.length > seqLimit ? ` 等 ${acts.length} 项` : ''}。`);
+
+  // 用时最长的一项
+  const longest = acts.reduce((p, a) => (a.duration || 0) > (p.duration || 0) ? a : p, acts[0]);
+  const longestName = (longest.name && longest.name.trim())
+    ? longest.name
+    : (subNameOf(longest.category, longest.sub) || '未填写');
+  lines.push(`用时最长的是${longestName}，${fmtLong(longest.duration)}。`);
+
+  return lines.join('');
+}
+
+let summaryTimer = null;
+
+function autoGrow(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 600) + 'px';
+}
+
+function onSummaryInput() {
+  const el = document.getElementById('summaryText');
+  autoGrow(el);
+  document.getElementById('summaryCount').textContent = `${el.value.length} 字`;
+  if (summaryTimer) clearTimeout(summaryTimer);
+  summaryTimer = setTimeout(() => {
+    const all = loadSummaries();
+    all[currentDate] = { text: el.value, edited: true, updatedAt: Date.now() };
+    saveSummaries(all);
+    document.getElementById('summaryMeta').textContent = '已保存（手动编辑）';
+  }, 700);
+}
+
+function syncSummaryAuto() {
+  const el = document.getElementById('summaryText');
+  if (!el) return;
+  const acts = getDayData(currentDate);
+  const all = loadSummaries();
+  const cur = all[currentDate];
+
+  if (!acts.length) {
+    el.value = cur ? (cur.text || '') : '';
+  } else if (!cur || !cur.edited) {
+    const text = buildSummary(currentDate);
+    if (!cur || cur.text !== text) {
+      all[currentDate] = { text, edited: false, updatedAt: Date.now() };
+      saveSummaries(all);
+    }
+    el.value = text;
+  } else {
+    el.value = cur.text || '';
+  }
+
+  autoGrow(el);
+  document.getElementById('summaryCount').textContent = `${el.value.length} 字`;
+  const now = loadSummaries()[currentDate];
+  document.getElementById('summaryMeta').textContent =
+    (now && now.edited) ? '手动编辑 · 记录变化不会覆盖' : '自动生成 · 可直接修改';
+}
+
+function regenSummary() {
+  if (!getDayData(currentDate).length) { alert('今天还没有记录，先添加一条吧'); return; }
+  if (!confirm('用当前记录重新生成小结？你手动改过的内容会被覆盖。')) return;
+  const all = loadSummaries();
+  all[currentDate] = { text: buildSummary(currentDate), edited: false, updatedAt: Date.now() };
+  saveSummaries(all);
+  syncSummaryAuto();
+}
+
+function formatDuration(min) {
+  if (min >= 60) {
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return m > 0 ? `${h}小时${m}分钟` : `${h}小时`;
+  }
+  return `${min}分钟`;
+}
+
+// 时间段文本：老版多时段记录（segs）多行显示，普通记录就是起止时间
+function actTimeLabel(a) {
+  if (a && Array.isArray(a.segs) && a.segs.length) {
+    const parts = a.segs.map(s => Array.isArray(s)
+      ? `${s[0] || ''}-${s[1] || ''}`
+      : `${s.start || ''}-${s.end || ''}`);
+    const valid = parts.filter(p => p && p !== '-');
+    if (valid.length) return valid.join('<br>');
+  }
+  return `${a.start || ''}-${a.end || ''}`;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ===== 滚轮时间选择器 =====
+function buildPicker(containerId, getH, getM, setH, setM) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+
+  const inner = document.createElement('div');
+  inner.className = 'time-picker-inner';
+
+  // 小时列
+  const hCol = document.createElement('div');
+  hCol.className = 'time-picker-col';
+  const hVP = document.createElement('div');
+  hVP.className = 'time-picker-viewport';
+  for (let i = 0; i < 24; i++) {
+    const item = document.createElement('div');
+    item.className = 'time-picker-item';
+    item.textContent = String(i).padStart(2, '0');
+    hVP.appendChild(item);
+  }
+  hCol.appendChild(hVP);
+
+  // 分钟列
+  const mCol = document.createElement('div');
+  mCol.className = 'time-picker-col';
+  const mVP = document.createElement('div');
+  mVP.className = 'time-picker-viewport';
+  for (let i = 0; i < 60; i++) {
+    const item = document.createElement('div');
+    item.className = 'time-picker-item';
+    item.textContent = String(i).padStart(2, '0');
+    mVP.appendChild(item);
+  }
+  mCol.appendChild(mVP);
+
+  inner.appendChild(hCol);
+  const sep = document.createElement('span');
+  sep.className = 'time-picker-sep';
+  sep.textContent = ':';
+  inner.appendChild(sep);
+  inner.appendChild(mCol);
+
+  // 选中指示器
+  const highlight = document.createElement('div');
+  highlight.className = 'time-picker-highlight';
+  inner.appendChild(highlight);
+
+  // 渐变遮罩
+  const fadeTop = document.createElement('div');
+  fadeTop.className = 'time-picker-fade-top';
+  const fadeBottom = document.createElement('div');
+  fadeBottom.className = 'time-picker-fade-bottom';
+  inner.appendChild(fadeTop);
+  inner.appendChild(fadeBottom);
+
+  container.appendChild(inner);
+
+  function highlightItems(vp, val) {
+    const items = vp.children;
+    for (let i = 0; i < items.length; i++) {
+      items[i].className = 'time-picker-item';
+      if (i === val) items[i].classList.add('active');
+      else if (Math.abs(i - val) === 1) items[i].classList.add('near');
+    }
+  }
+
+  // 实际 item 高度（跟随 CSS，避免手机端压缩后错位）
+  function getItemH(vp) {
+    return (vp.children[0] && vp.children[0].offsetHeight) || ITEM_HEIGHT;
+  }
+
+  function update() {
+    const h = getH(), m = getM();
+    hVP.scrollTop = h * getItemH(hVP);
+    mVP.scrollTop = m * getItemH(mVP);
+    highlightItems(hVP, h);
+    highlightItems(mVP, m);
+  }
+
+  let scrollTimer = null;
+  function onScroll(vp, isHour) {
+    if (scrollTimer) clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      const ih = getItemH(vp);
+      const v = Math.round(vp.scrollTop / ih);
+      const h = getH(), m = getM();
+      if (isHour) {
+        if (v >= 0 && v < 24) setH(v);
+      } else {
+        if (v >= 0 && v < 60) setM(v);
+      }
+      update();
+      renderTime();
+    }, 80);
+  }
+
+  hVP.addEventListener('scroll', () => onScroll(hVP, true));
+  mVP.addEventListener('scroll', () => onScroll(mVP, false));
+
+  // 鼠标滚轮：普通鼠标一格=1个单位；平滑滚轮/触控板按累计偏移合并
+  const smoothAcc = { left: 0, right: 0 };
+  const STEP_PX = 100;
+  const DISCRETE_PX = 60;
+  container.addEventListener('wheel', e => {
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const isLeft = x < rect.width / 2;
+    let d = e.deltaY;
+    if (e.deltaMode === 1) d *= 32;       // 行模式换算为像素
+    else if (e.deltaMode === 2) d *= 100; // 页模式换算为像素
+    const key = isLeft ? 'left' : 'right';
+    const h = getH(), m = getM();
+    let steps = 0;
+    if (Math.abs(d) >= DISCRETE_PX) {
+      steps = d > 0 ? 1 : -1;
+      smoothAcc[key] = 0;
+    } else {
+      smoothAcc[key] += d;
+      while (smoothAcc[key] >= STEP_PX) { smoothAcc[key] -= STEP_PX; steps++; }
+      while (smoothAcc[key] <= -STEP_PX) { smoothAcc[key] += STEP_PX; steps--; }
+    }
+    if (steps !== 0) {
+      if (isLeft) {
+        setH((h + steps + 24) % 24);
+      } else {
+        setM((m + steps + 60) % 60);
+      }
+      update();
+      renderTime();
+    }
+    e.preventDefault();
+  }, { passive: false });
+
+  update();
+}
+
+// 导出数据（记录 + 小结 + 天气，换设备不丢东西）
+function exportData() {
+  const bundle = {
+    app: 'daily-tracker',
+    version: '2.2.0',
+    exportedAt: new Date().toISOString(),
+    data: loadData(),
+    summaries: loadSummaries(),
+    weather: loadWeatherStore()
+  };
+  const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `daily-tracker-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// 导入数据
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const raw = JSON.parse(e.target.result);
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('bad format');
+
+      // 三种格式都认：本版导出包 / 旧版纯记录 / v3 版导出包（raw.daily_tracker_data）
+      let incomingData = null, incomingSum = null, incomingW = null;
+      if (raw.raw && typeof raw.raw === 'object') {
+        incomingData = raw.raw.daily_tracker_data || {};
+        const meta = raw.raw.daily_tracker_meta || {};
+        incomingSum = meta.summaries || null;
+        if (meta.weather || meta.settings) {
+          incomingW = {
+            days: meta.weather || {},
+            place: (meta.settings && meta.settings.lat)
+              ? { lat: meta.settings.lat, lon: meta.settings.lon, name: meta.settings.name || '当前位置' }
+              : null
+          };
+        }
+      } else if (raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data)) {
+        incomingData = raw.data;
+        incomingSum = raw.summaries || null;
+        incomingW = raw.weather || null;
+      } else {
+        incomingData = raw;
+      }
+      if (!incomingData || typeof incomingData !== 'object' || Array.isArray(incomingData)) {
+        alert('文件格式不正确');
+        return;
+      }
+
+      const dayKeys = Object.keys(incomingData).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
+      const hasSum = incomingSum && Object.keys(incomingSum).length > 0;
+      if (!dayKeys.length && !hasSum) {
+        alert('这个文件里没有找到可导入的记录');
+        return;
+      }
+
+      // 记录：按日期合并，同 id 不重复加，本地原有记录一律保留
+      const local = loadData();
+      let added = 0;
+      dayKeys.forEach(d => {
+        const arr = Array.isArray(incomingData[d]) ? incomingData[d] : [];
+        if (!Array.isArray(local[d])) local[d] = [];
+        const ids = new Set(local[d].map(r => r && r.id));
+        arr.forEach(r => {
+          if (!r || typeof r !== 'object') return;
+          if (r.id != null && ids.has(r.id)) return;
+          local[d].push(r);
+          if (r.id != null) ids.add(r.id);
+          added++;
+        });
+      });
+      saveData(local);
+
+      // 小结：手动改过的优先，其次比更新时间
+      if (hasSum) {
+        const ls = loadSummaries();
+        Object.keys(incomingSum).forEach(d => {
+          const y = incomingSum[d];
+          if (!y) return;
+          const x = ls[d];
+          if (!x) { ls[d] = y; return; }
+          if (x.edited && !y.edited) return;
+          if (!x.edited && y.edited) { ls[d] = y; return; }
+          ls[d] = (y.updatedAt || 0) >= (x.updatedAt || 0) ? y : x;
+        });
+        localStorage.setItem(SUMMARY_KEY, JSON.stringify(ls));
+      }
+
+      // 天气：缺哪天补哪天，已有的不覆盖
+      if (incomingW && (incomingW.days || incomingW.place)) {
+        const ws = loadWeatherStore();
+        Object.keys(incomingW.days || {}).forEach(d => {
+          if (!ws.days[d] && incomingW.days[d]) ws.days[d] = incomingW.days[d];
+        });
+        if (!ws.place && incomingW.place) ws.place = incomingW.place;
+        saveWeatherStore(ws);
+      }
+
+      render();
+      fetchWeather(false);
+      alert(`导入完成：新增 ${added} 条记录，和本地数据合并，原有记录没有被覆盖。`);
+    } catch {
+      alert('文件解析失败，请确认是有效的 JSON 文件');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function renderTime() {
+  // 仅触发重新渲染，不做其他事
+}
+
+// ===== 云同步（GitHub Gist） =====
+const GIST_ID_KEY = 'daily_tracker_gist_id';
+const GIST_TOKEN_KEY = 'daily_tracker_gist_token';
+const SYNC_FILE = 'daily-tracker-data.json';
+const SYNC_SUMMARY_FILE = 'daily-tracker-summary.json';
+let pushTimer = null;
+let lastSyncTime = 0;
+
+function getGistConfig() {
+  return {
+    id: (localStorage.getItem(GIST_ID_KEY) || '').trim(),
+    token: (localStorage.getItem(GIST_TOKEN_KEY) || '').trim()
+  };
+}
+
+function saveSyncConfig() {
+  const id = document.getElementById('gistId').value.trim();
+  const token = document.getElementById('gistToken').value.trim();
+  if (!id) { alert('请填写 Gist ID'); return; }
+  localStorage.setItem(GIST_ID_KEY, id);
+  localStorage.setItem(GIST_TOKEN_KEY, token);
+  document.getElementById('gistToken').value = '';
+  setSyncStatus('配置已保存，正在拉取云端数据...', 'ok');
+  syncFromCloud(false);
+}
+
+function setSyncStatus(msg, cls) {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'sync-status' + (cls ? ' ' + cls : '');
+}
+
+function loadSyncConfigIntoUI() {
+  const cfg = getGistConfig();
+  if (cfg.id) {
+    document.getElementById('gistId').value = cfg.id;
+    setSyncStatus('已配置 · 正在检查云端同步...', 'ok');
+  } else {
+    setSyncStatus('未配置 · 所有改动仅保存在本设备');
+  }
+}
+
+function mergeData(a, b) {
+  const out = {};
+  const dates = new Set([...Object.keys(a), ...Object.keys(b)]);
+  dates.forEach(d => {
+    const map = new Map();
+    (a[d] || []).concat(b[d] || []).forEach(act => {
+      if (act && act.id !== undefined) map.set(act.id, act);
+    });
+    out[d] = Array.from(map.values());
+  });
+  return out;
+}
+
+function schedulePush() {
+  if (pushTimer) clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => { pushTimer = null; syncToCloud(true); }, 3000);
+}
+
+function gistFileName(files) {
+  if (files[SYNC_FILE]) return SYNC_FILE;
+  const keys = Object.keys(files).filter(k => k !== SYNC_SUMMARY_FILE);
+  return keys.length > 0 ? keys[0] : null;
+}
+
+async function syncFromCloud(silent) {
+  const cfg = getGistConfig();
+  if (!cfg.id) {
+    if (!silent) setSyncStatus('未配置 Gist ID', 'error');
+    return;
+  }
+  try {
+    if (!silent) setSyncStatus('正在从云端拉取...');
+    const headers = cfg.token
+      ? { 'Accept': 'application/vnd.github.v3+json', 'Authorization': 'token ' + cfg.token }
+      : { 'Accept': 'application/vnd.github.v3+json' };
+    const resp = await fetch('https://api.github.com/gists/' + cfg.id, { headers });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const gist = await resp.json();
+    const files = gist.files || {};
+    const fname = gistFileName(files);
+    if (!fname || !files[fname].content) {
+      if (!silent) setSyncStatus('云端还没有数据文件', 'error');
+      return;
+    }
+    const remote = JSON.parse(files[fname].content);
+    const local = loadData();
+    const merged = mergeData(local, remote);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    // 小结文件（可选，老数据里没有）
+    if (files[SYNC_SUMMARY_FILE] && files[SYNC_SUMMARY_FILE].content) {
+      try {
+        const remoteSum = JSON.parse(files[SYNC_SUMMARY_FILE].content) || {};
+        const localSum = loadSummaries();
+        const mergedSum = {};
+        new Set([...Object.keys(localSum), ...Object.keys(remoteSum)]).forEach(d => {
+          const x = localSum[d], y = remoteSum[d];
+          if (!x) mergedSum[d] = y;
+          else if (!y) mergedSum[d] = x;
+          else mergedSum[d] = (y.updatedAt || 0) >= (x.updatedAt || 0) ? y : x;
+        });
+        localStorage.setItem(SUMMARY_KEY, JSON.stringify(mergedSum));
+      } catch (e) { /* 小结解析失败不影响主数据 */ }
+    }
+    render();
+    setSyncStatus('已从云端同步数据', 'ok');
+  } catch (err) {
+    if (silent) {
+      setSyncStatus('已配置 · 云端检查未完成（网络错误），数据已保存在本设备', 'error');
+    } else {
+      setSyncStatus('拉取失败：' + err.message, 'error');
+    }
+  }
+}
+
+async function syncToCloud(silent) {
+  const cfg = getGistConfig();
+  if (!cfg.id) {
+    if (!silent) setSyncStatus('未配置 Gist ID', 'error');
+    return;
+  }
+  if (!cfg.token) {
+    if (!silent) setSyncStatus('推送需要 Token，请填写后保存', 'error');
+    return;
+  }
+  try {
+    if (!silent) setSyncStatus('正在推送到云端...');
+    const data = loadData();
+    const body = { files: {} };
+    body.files[SYNC_FILE] = { content: JSON.stringify(data, null, 2) };
+    body.files[SYNC_SUMMARY_FILE] = { content: JSON.stringify(loadSummaries(), null, 2) };
+    const resp = await fetch('https://api.github.com/gists/' + cfg.id, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.github.v3+json',
+        'Authorization': 'token ' + cfg.token
+      },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    setSyncStatus('已推送到云端 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false }), 'ok');
+  } catch (err) {
+    if (!silent) setSyncStatus('推送失败：' + err.message, 'error');
+  }
+}
+
+// A方案：页面从后台切回前台时自动拉取云端数据
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    const now = Date.now();
+    if (now - lastSyncTime > 10000) {
+      lastSyncTime = now;
+      syncFromCloud(true);
+    }
+  }
+});
+
+let calYear, calMonth;
+function renderCalendar(dateStr) {
+  calYear = parseInt(dateStr.split('-')[0]);
+  calMonth = parseInt(dateStr.split('-')[1]);
+  drawCalendar();
+}
+function drawCalendar() {
+  const y = calYear, m = calMonth;
+  const firstDay = new Date(y, m - 1, 1).getDay();
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const today = new Date().toISOString().slice(0, 10);
+  const data = loadData();
+  const weekdays = ['日','一','二','三','四','五','六'];
+  document.getElementById('calHeader').innerHTML =
+    `<span class="cal-nav" onclick="changeCalMonth(-1)">‹</span><span class="cal-ym" onclick="toggleCalPicker('calYearPicker')">${y}年</span><span class="cal-ym" onclick="toggleCalPicker('calMonthPicker')">${m}月</span><span class="cal-nav" onclick="changeCalMonth(1)">›</span>`;
+  let html = '';
+  weekdays.forEach(w => { html += `<div class="weekday">${w}</div>`; });
+  for (let i = 0; i < firstDay; i++) { html += '<div class="day empty">·</div>'; }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateKey = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = dateKey === today;
+    const hasData = data[dateKey] && data[dateKey].length > 0;
+    let cls = 'day';
+    if (isToday) cls += ' today';
+    else if (hasData) cls += ' has-data';
+    html += `<div class="${cls}" onclick="goToDate('${dateKey}')">${d}</div>`;
+  }
+  document.getElementById('calGrid').innerHTML = html;
+}
+function changeCalMonth(delta) {
+  let newM = calMonth + delta;
+  let newY = calYear;
+  if (newM < 1) { newM = 12; newY--; }
+  if (newM > 12) { newM = 1; newY++; }
+  calYear = newY;
+  calMonth = newM;
+  drawCalendar();
+}
+function toggleCalPicker(id) {
+  const yearPicker = document.getElementById('calYearPicker');
+  const monthPicker = document.getElementById('calMonthPicker');
+  if (id === 'calYearPicker') {
+    const show = !yearPicker.classList.contains('show');
+    monthPicker.classList.remove('show');
+    if (show) {
+      renderYearPicker();
+      yearPicker.classList.add('show');
+    } else {
+      yearPicker.classList.remove('show');
+    }
+  } else {
+    const show = !monthPicker.classList.contains('show');
+    yearPicker.classList.remove('show');
+    if (show) {
+      renderMonthPicker();
+      monthPicker.classList.add('show');
+    } else {
+      monthPicker.classList.remove('show');
+    }
+  }
+}
+function renderYearPicker() {
+  const picker = document.getElementById('calYearPicker');
+  const currentY = new Date().getFullYear();
+  const startY = currentY - 20;
+  let html = '';
+  for (let i = 0; i < 41; i++) {
+    const year = startY + i;
+    const cls = year === calYear ? 'cal-ym-item current' : 'cal-ym-item';
+    html += `<div class="${cls}" onclick="selectCalYear(${year})">${year}年</div>`;
+  }
+  picker.innerHTML = html;
+  picker.scrollTop = (calYear - startY) * 30;
+}
+function renderMonthPicker() {
+  const picker = document.getElementById('calMonthPicker');
+  let html = '';
+  for (let i = 1; i <= 12; i++) {
+    const cls = i === calMonth ? 'cal-ym-item current' : 'cal-ym-item';
+    html += `<div class="${cls}" onclick="selectCalMonth(${i})">${i}月</div>`;
+  }
+  picker.innerHTML = html;
+}
+function selectCalYear(year) {
+  calYear = year;
+  document.getElementById('calYearPicker').classList.remove('show');
+  drawCalendar();
+}
+function selectCalMonth(month) {
+  calMonth = month;
+  document.getElementById('calMonthPicker').classList.remove('show');
+  drawCalendar();
+}
+function goToDate(dateStr) {
+  currentDate = dateStr;
+  initStartTimes();
+  renderAllPickers();
+  render();
+}
+
+function renderAllPickers() {
+  buildPicker('startPicker',
+    () => startH, () => startM,
+    v => { startH = v; }, v => { startM = v; }
+  );
+  buildPicker('endPicker',
+    () => endH, () => endM,
+    v => { endH = v; }, v => { endM = v; }
+  );
+}
+
+const nameInputEl = document.getElementById('actName');
+nameInputEl.addEventListener('input', () => autoGrow(nameInputEl));
+document.getElementById('summaryText').addEventListener('input', onSummaryInput);
+
+migrateLegacyStores();
+renderAllCategorySelects();
+renderAllPickers();
+loadSyncConfigIntoUI();
+// 已配置过城市就把城市名回填到设置里
+(function fillCityInput() {
+  const el = document.getElementById('weatherCity');
+  const p = loadWeatherStore().place;
+  if (el && p && p.name && p.name !== '当前位置') el.value = p.name;
+})();
+render();
+fetchWeather(false);
+syncFromCloud(true);
+
+// PWA：注册 Service Worker（安装到桌面 / 离线可用）
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => {
+      console.log('SW register failed:', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
