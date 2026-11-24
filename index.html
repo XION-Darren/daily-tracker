@@ -37,6 +37,11 @@ body {
   -webkit-text-fill-color: transparent;
 }
 .date-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
   text-align: center;
   color: #9b8ab5;
   font-size: 0.85rem;
@@ -44,6 +49,28 @@ body {
   position: relative;
   cursor: pointer;
 }
+
+/* 日期旁边的天气小标签 */
+.weather-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #241835;
+  border: 1px solid #3d2a54;
+  color: #cbbcdf;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.weather-chip:hover { border-color: #6b4f8f; }
+.weather-chip:active { border-color: #a855f7; background: #2a1c40; }
+.weather-chip .w-ico { font-size: 0.9rem; line-height: 1; }
+.weather-chip .w-temp { color: #e8e0f0; font-weight: 600; }
+.weather-chip.muted { color: #7d6c94; }
 .calendar-popup {
   position: absolute;
   top: 100%;
@@ -63,6 +90,8 @@ body {
 .calendar-popup:hover {
   display: block;
 }
+/* 鼠标停在天气标签上时不要弹出日历 */
+.date-display:has(.weather-chip:hover) .calendar-popup { display: none; }
 .calendar-header {
   display: flex;
   align-items: center;
@@ -135,34 +164,6 @@ body {
 .calendar-grid .day.has-data { color: #c084fc; font-weight: 500; }
 .calendar-grid .day.empty { cursor: default; color: transparent; }
 
-.stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-bottom: 20px;
-}
-.stat-card {
-  background: #241835;
-  border-radius: 12px;
-  padding: 12px 8px;
-  text-align: center;
-  border: 1px solid #3d2a54;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-}
-.stat-card:active { background: #2a1c40; }
-.stat-card.active {
-  border-color: #c084fc;
-  background: #2d1f44;
-  box-shadow: 0 0 0 1px #c084fc;
-}
-.stat-card .stat-icon { font-size: 1rem; margin-bottom: 4px; }
-.stat-card .num { font-size: 1.15rem; font-weight: 700; color: #c084fc; }
-.stat-card .label {
-  font-size: 0.68rem; color: #9b8ab5; margin-top: 4px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-
 .progress-bar {
   height: 6px;
   background: #2d1f44;
@@ -197,7 +198,7 @@ body {
   align-items: center;
 }
 .form-row:last-child { margin-bottom: 0; }
-input, select {
+input, select, textarea {
   padding: 10px 14px;
   border-radius: 8px;
   border: 1px solid #4a3660;
@@ -206,9 +207,64 @@ input, select {
   font-size: 0.9rem;
   outline: none;
 }
-input:focus, select:focus { border-color: #a855f7; }
+input:focus, select:focus, textarea:focus { border-color: #a855f7; }
 input[type="text"] { flex: 2; }
 select { flex: 1; cursor: pointer; }
+.name-input {
+  width: 100%;
+  min-height: 42px;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+/* 每日总结 */
+.summary-card {
+  background: #241835;
+  border: 1px solid #3d2a54;
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 16px;
+}
+.summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.summary-title {
+  font-size: 0.8rem;
+  color: #c084fc;
+  letter-spacing: 1px;
+}
+.btn-regen {
+  background: #1a1025;
+  border: 1px solid #4a3660;
+  color: #9b8ab5;
+  font-size: 0.72rem;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.btn-regen:active { border-color: #a855f7; color: #c084fc; }
+.summary-text {
+  width: 100%;
+  min-height: 96px;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.7;
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+.summary-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 0.65rem;
+  color: #6b5a7a;
+}
 .btn-add {
   flex: 1;
   background: linear-gradient(135deg, #7c3aed, #a855f7);
@@ -333,7 +389,9 @@ select { flex: 1; cursor: pointer; }
 .activity-info { flex: 1; min-width: 0; }
 .activity-name {
   font-weight: 500; font-size: 0.9rem;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .activity-meta { font-size: 0.7rem; color: #9b8ab5; margin-top: 2px; }
 .activity-time {
@@ -467,9 +525,6 @@ select { flex: 1; cursor: pointer; }
   .form-row { gap: 6px; }
   input, select { padding: 8px 8px; font-size: 0.82rem; }
   .btn-add { padding: 8px; font-size: 0.82rem; }
-  .stat-card { padding: 10px 4px; }
-  .stat-card .num { font-size: 1rem; }
-  .stat-card .label { font-size: 0.6rem; }
   .date-nav { gap: 8px; }
   .date-nav span { min-width: 100px; }
 }
@@ -503,6 +558,8 @@ select { flex: 1; cursor: pointer; }
     </div>
   </div>
   <div class="date-display" id="dateDisplay">
+    <span class="date-text" id="dateText"></span>
+    <span class="weather-chip muted" id="weatherChip" title="点击刷新天气" onclick="onWeatherChipClick(event)"><span class="w-ico">🌡</span><span class="w-txt">天气</span></span>
     <div class="calendar-popup">
       <div class="calendar-header" id="calHeader"></div>
       <div class="calendar-grid" id="calGrid"></div>
@@ -517,35 +574,14 @@ select { flex: 1; cursor: pointer; }
     <button onclick="changeDate(1)">后一天 ▶</button>
   </div>
 
-  <div class="stats">
-    <div class="stat-card" onclick="setFilter(null)" id="cardAll">
-      <div class="stat-icon">📋</div>
-      <div class="num" id="totalCount">0</div>
-      <div class="label">行动项</div>
-    </div>
-    <div class="stat-card" onclick="setFilter('sleep')" id="cardSleep">
-      <div class="stat-icon">😴</div>
-      <div class="num" id="sleepHours">0h</div>
-      <div class="label">睡觉时长</div>
-    </div>
-    <div class="stat-card" onclick="setFilter('top')" id="cardTop">
-      <div class="stat-icon" id="topIcon">🏃</div>
-      <div class="num" id="topHours">0h</div>
-      <div class="label" id="topLabel">时长最高</div>
-    </div>
-    <div class="stat-card" onclick="setFilter('work')" id="cardWork">
-      <div class="stat-icon">💼</div>
-      <div class="num" id="workHours">0h</div>
-      <div class="label">工作时长</div>
-    </div>
-  </div>
-
   <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
   <div class="goal-text" id="goalText">有效工作 8 小时</div>
 
   <div class="add-form" id="addForm">
     <div class="form-row">
-      <input type="text" id="actName" placeholder="做了什么..." maxlength="50">
+      <textarea id="actName" class="name-input" rows="1" placeholder="做了什么...（可不填，字数不限）"></textarea>
+    </div>
+    <div class="form-row">
       <select id="actCategory" onchange="renderSubCategories()"></select>
       <select id="actSub"></select>
     </div>
@@ -560,6 +596,18 @@ select { flex: 1; cursor: pointer; }
   <div class="section-title">今日记录</div>
   <div class="activity-list" id="activityList"></div>
 
+  <div class="summary-card">
+    <div class="summary-head">
+      <span class="summary-title">今日小结</span>
+      <button class="btn-regen" onclick="regenSummary()">重新生成</button>
+    </div>
+    <textarea id="summaryText" class="summary-text" rows="4" placeholder="记录完事项后会自动生成小结，也可以自己写。"></textarea>
+    <div class="summary-foot">
+      <span id="summaryMeta">自动生成 · 可直接修改</span>
+      <span id="summaryCount">0 字</span>
+    </div>
+  </div>
+
   <details class="settings-panel">
     <summary>⚙️ 设置与数据</summary>
     <div class="settings-body">
@@ -569,6 +617,13 @@ select { flex: 1; cursor: pointer; }
         <label class="btn-import" for="importFile">📤 导入数据</label>
         <input type="file" id="importFile" accept=".json" onchange="importData(event)" hidden>
       </div>
+      <div class="sub-title">天气地点</div>
+      <div class="form-row">
+        <input type="text" id="weatherCity" placeholder="城市名，如 南京" style="flex:1">
+        <button class="btn-export" onclick="saveWeatherCity()" style="white-space:nowrap">保存</button>
+        <button class="btn-export" onclick="useGeoLocation()" style="white-space:nowrap">定位</button>
+      </div>
+      <div class="sync-tip" id="weatherTip">天气来自 Open-Meteo，不需要 Key。不填城市则优先用系统定位，定位不可用时默认南京。</div>
       <div class="sub-title">云同步（GitHub Gist）</div>
       <div class="sync-box">
         <div class="sync-status" id="syncStatus">未配置 · 所有改动仅保存在本设备</div>
@@ -591,18 +646,31 @@ select { flex: 1; cursor: pointer; }
 
 <script>
 const STORAGE_KEY = 'daily_tracker_data';
+const SUMMARY_KEY = 'daily_tracker_summary';
 const GOAL_HOURS = 8;
 const ITEM_HEIGHT = 40;
 let currentDate = new Date().toISOString().slice(0, 10);
 
 const categories = {
-  work: { name: '工作', icon: '💼', cls: 'cat-work', subs: { research: '研究', job: '求职', other: '其它' } },
-  exercise: { name: '运动', icon: '🏃', cls: 'cat-exercise', subs: { walk: '快走', strength: '力量', other: '其它' } },
+  work: { name: '工作', icon: '💼', cls: 'cat-work', subs: { office: '上班', trip: '出差', social: '应酬', meeting: '会议', research: '研究' } },
+  life: { name: '生活', icon: '🏠', cls: 'cat-life', subs: { food: '美食', chore: '家务', leisure: '休闲', kid: '带娃', other: '其它' } },
+  exercise: { name: '运动', icon: '🏃', cls: 'cat-exercise', subs: { jog: '慢跑', walk: '快走', strength: '力量', stroll: '散步' } },
+  rest: { name: '休息', icon: '😴', cls: 'cat-rest', subs: { sleep: '睡觉', fun: '娱乐' } }
+};
+
+// 旧版分类：只用于把已有记录显示完整，不再出现在新增下拉里
+const LEGACY_CATS = {
   study: { name: '学习', icon: '📖', cls: 'cat-study', subs: { ai: 'AI', energy: '能源', startup: '创业', finance: '理财', other: '其它' } },
-  life: { name: '生活', icon: '🏠', cls: 'cat-life', subs: { food: '美食', chore: '家务', shopping: '逛街', other: '其它' } },
-  rest: { name: '休息', icon: '😴', cls: 'cat-rest', subs: { sleep: '睡觉', fun: '娱乐', other: '其它' } },
   kid: { name: '带娃', icon: '👶', cls: 'cat-kid', subs: { learn: '学习', fun: '娱乐', other: '其它' } }
 };
+const LEGACY_SUBS = { job: '求职', shopping: '逛街', other: '其它' };
+
+function catInfo(key) { return categories[key] || LEGACY_CATS[key] || null; }
+function subNameOf(catKey, subKey) {
+  const c = catInfo(catKey);
+  if (c && c.subs && subKey && c.subs[subKey]) return c.subs[subKey];
+  return (subKey && LEGACY_SUBS[subKey]) || '';
+}
 
 function loadData() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
@@ -613,6 +681,336 @@ function saveData(data) {
   schedulePush();
 }
 function getDayData(date) { return loadData()[date] || []; }
+
+// 每日小结：独立存储，不影响原有记录结构
+function loadSummaries() {
+  try { return JSON.parse(localStorage.getItem(SUMMARY_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveSummaries(s) {
+  localStorage.setItem(SUMMARY_KEY, JSON.stringify(s));
+  schedulePush();
+}
+
+/* =========================================================
+   天气（Open-Meteo，无需 Key）
+   存储：daily_tracker_weather
+   { place:{lat,lon,name}, days:{ 'YYYY-MM-DD': {...} }, updatedAt }
+   ========================================================= */
+const WEATHER_KEY = 'daily_tracker_weather';
+const DEFAULT_PLACE = { lat: 32.0603, lon: 118.7969, name: '南京' };
+
+const WMO = {
+  0: ['晴', '☀️'], 1: ['大致晴朗', '🌤'], 2: ['多云', '⛅'], 3: ['阴', '☁️'],
+  45: ['雾', '🌫'], 48: ['雾凇', '🌫'],
+  51: ['小毛毛雨', '🌦'], 53: ['毛毛雨', '🌦'], 55: ['浓毛毛雨', '🌦'],
+  56: ['冻毛毛雨', '🌧'], 57: ['强冻毛毛雨', '🌧'],
+  61: ['小雨', '🌦'], 63: ['中雨', '🌧'], 65: ['大雨', '🌧'],
+  66: ['冻雨', '🌧'], 67: ['强冻雨', '🌧'],
+  71: ['小雪', '🌨'], 73: ['中雪', '🌨'], 75: ['大雪', '❄️'], 77: ['雪粒', '🌨'],
+  80: ['阵雨', '🌦'], 81: ['强阵雨', '🌧'], 82: ['暴雨', '⛈'],
+  85: ['阵雪', '🌨'], 86: ['强阵雪', '❄️'],
+  95: ['雷阵雨', '⛈'], 96: ['雷暴伴冰雹', '⛈'], 99: ['强雷暴伴冰雹', '⛈']
+};
+function wmoInfo(code) { return WMO[code] || ['未知', '🌡']; }
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function loadWeatherStore() {
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(WEATHER_KEY) || 'null'); } catch { s = null; }
+  if (!s || typeof s !== 'object') s = {};
+  if (!s.days || typeof s.days !== 'object') s.days = {};
+  if (!s.place || typeof s.place !== 'object') s.place = null;
+  return s;
+}
+function saveWeatherStore(s) {
+  localStorage.setItem(WEATHER_KEY, JSON.stringify(s));
+}
+
+let weatherFetching = false;
+let weatherFailed = false;
+
+async function resolvePlace(store) {
+  if (store.place && store.place.lat && store.place.lon) return store.place;
+  try {
+    if (navigator.geolocation) {
+      const pos = await new Promise((res, rej) =>
+        navigator.geolocation.getCurrentPosition(res, rej, { timeout: 6000, maximumAge: 600000 })
+      );
+      const place = {
+        lat: Number(pos.coords.latitude.toFixed(4)),
+        lon: Number(pos.coords.longitude.toFixed(4)),
+        name: '当前位置'
+      };
+      const s = loadWeatherStore();
+      s.place = place;
+      saveWeatherStore(s);
+      return place;
+    }
+  } catch (e) { /* 定位不可用就用默认城市 */ }
+  return DEFAULT_PLACE;
+}
+
+async function fetchWeather(force) {
+  if (weatherFetching) return;
+  const store = loadWeatherStore();
+  const fresh = store.updatedAt && (Date.now() - store.updatedAt < 20 * 60 * 1000);
+  if (!force && fresh && store.days[todayStr()]) { renderWeather(); return; }
+  weatherFetching = true;
+  weatherFailed = false;
+  const chip = document.getElementById('weatherChip');
+  if (chip) chip.title = '正在获取天气…';
+  const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), 9000) : null;
+  try {
+    const place = await resolvePlace(store);
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + place.lat +
+      '&longitude=' + place.lon +
+      '&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,weather_code' +
+      '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max' +
+      '&timezone=Asia%2FShanghai&past_days=31&forecast_days=3';
+    const resp = await fetch(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const j = await resp.json();
+    const daily = j.daily || {};
+    const times = daily.time || [];
+    const s2 = loadWeatherStore();
+    const now = Date.now();
+    times.forEach((d, i) => {
+      const code = daily.weather_code ? daily.weather_code[i] : null;
+      const info = wmoInfo(code);
+      const old = s2.days[d] || {};
+      s2.days[d] = {
+        code: code,
+        text: info[0],
+        icon: info[1],
+        tmax: daily.temperature_2m_max ? daily.temperature_2m_max[i] : null,
+        tmin: daily.temperature_2m_min ? daily.temperature_2m_min[i] : null,
+        precip: daily.precipitation_sum ? daily.precipitation_sum[i] : null,
+        wind: daily.wind_speed_10m_max ? daily.wind_speed_10m_max[i] : null,
+        place: place.name,
+        temp: old.temp != null ? old.temp : null,
+        fetchedAt: now
+      };
+    });
+    const t = todayStr();
+    if (j.current && s2.days[t]) {
+      s2.days[t].temp = j.current.temperature_2m;
+      s2.days[t].humidity = j.current.relative_humidity_2m;
+      s2.days[t].feels = j.current.apparent_temperature;
+      s2.days[t].icon = wmoInfo(j.current.weather_code)[1];
+      s2.days[t].text = wmoInfo(j.current.weather_code)[0];
+    }
+    s2.place = place;
+    s2.updatedAt = now;
+    saveWeatherStore(s2);
+  } catch (e) {
+    /* 离线或接口不可用：保留已有缓存，不打扰用户 */
+    weatherFailed = true;
+  } finally {
+    if (timer) clearTimeout(timer);
+    weatherFetching = false;
+    renderWeather();
+  }
+}
+
+function weatherForDate(dateStr) {
+  const s = loadWeatherStore();
+  return s.days[dateStr] || null;
+}
+
+function renderWeather() {
+  const chip = document.getElementById('weatherChip');
+  if (!chip) return;
+  const isToday = currentDate === todayStr();
+  const w = weatherForDate(currentDate);
+  if (!w) {
+    chip.className = 'weather-chip muted';
+    let label = '无天气记录';
+    if (isToday) label = weatherFailed ? '天气 —' : '天气获取中';
+    chip.innerHTML = '<span class="w-ico">🌡</span><span class="w-txt">' + label + '</span>';
+    chip.title = weatherFailed
+      ? '网络不通或接口不可用，点击重试'
+      : (isToday ? '点击重新获取天气' : '这一天没有天气记录');
+    return;
+  }
+  const ico = w.icon || wmoInfo(w.code)[1];
+  let main = '';
+  if (isToday && w.temp != null) {
+    main = Math.round(w.temp) + '°';
+  } else if (w.tmin != null && w.tmax != null) {
+    main = Math.round(w.tmin) + '°~' + Math.round(w.tmax) + '°';
+  } else if (w.temp != null) {
+    main = Math.round(w.temp) + '°';
+  } else {
+    main = '—';
+  }
+  chip.className = 'weather-chip';
+  chip.innerHTML = '<span class="w-ico">' + ico + '</span>' +
+    '<span class="w-txt">' + escapeHtml(main) + '</span>';
+  const bits = [w.text || ''];
+  if (w.tmin != null && w.tmax != null) bits.push('全天 ' + Math.round(w.tmin) + '°~' + Math.round(w.tmax) + '°');
+  if (w.temp != null) bits.push('当前 ' + Math.round(w.temp) + '°');
+  if (w.humidity != null) bits.push('湿度 ' + Math.round(w.humidity) + '%');
+  if (w.wind != null) bits.push('风 ' + Math.round(w.wind) + ' km/h');
+  if (w.place) bits.push(w.place);
+  bits.push('点击刷新');
+  chip.title = bits.filter(Boolean).join(' · ');
+}
+
+function onWeatherChipClick(e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  fetchWeather(true);
+}
+
+async function saveWeatherCity() {
+  const input = document.getElementById('weatherCity');
+  const tip = document.getElementById('weatherTip');
+  const raw = (input.value || '').trim();
+  if (!raw) { if (tip) tip.textContent = '请输入城市名，或用系统定位自动识别。'; return; }
+  if (tip) tip.textContent = '正在查询「' + raw + '」…';
+  try {
+    const url = 'https://geocoding-api.open-meteo.com/v1/search?name=' +
+      encodeURIComponent(raw) + '&count=1&language=zh&format=json';
+    const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const tm = ctrl ? setTimeout(() => ctrl.abort(), 9000) : null;
+    const r = await fetch(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined });
+    const j = await r.json();
+    if (tm) clearTimeout(tm);
+    const hit = (j.results || [])[0];
+    if (!hit) { if (tip) tip.textContent = '没找到这个城市，换个写法试试（如「南京」「Nanjing」）。'; return; }
+    const store = loadWeatherStore();
+    store.place = { lat: hit.latitude, lon: hit.longitude, name: hit.name };
+    store.updatedAt = 0;
+    saveWeatherStore(store);
+    if (tip) tip.textContent = '已设为「' + hit.name + '」，正在刷新天气…';
+    await fetchWeather(true);
+    if (tip) tip.textContent = '当前地点：' + hit.name +
+      (hit.admin1 ? '（' + hit.admin1 + '）' : '') + '，天气已更新。';
+  } catch (err) {
+    if (tip) tip.textContent = '查询失败，检查网络后重试。';
+  }
+}
+
+async function useGeoLocation() {
+  const tip = document.getElementById('weatherTip');
+  try {
+    const pos = await new Promise((res, rej) =>
+      navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 })
+    );
+    const store = loadWeatherStore();
+    store.place = {
+      lat: Number(pos.coords.latitude.toFixed(4)),
+      lon: Number(pos.coords.longitude.toFixed(4)),
+      name: '当前位置'
+    };
+    store.updatedAt = 0;
+    saveWeatherStore(store);
+    if (tip) tip.textContent = '已使用系统定位，正在刷新天气…';
+    await fetchWeather(true);
+    if (tip) tip.textContent = '天气已按定位更新。';
+  } catch (err) {
+    if (tip) tip.textContent = '定位不可用（浏览器可能拒绝了定位权限），请直接填城市名。';
+  }
+}
+
+/* =========================================================
+   旧数据迁移：把历史版本存过的数据合并回当前结构
+   1) 记录主键一直是 daily_tracker_data，这里再兜底合并其它历史键
+   2) v3 版的天气/小结存在 daily_tracker_meta，搬回各自的位置
+   3) v3 的多时段记录（segs）补算时长，避免总时长算错
+   ========================================================= */
+function toMinutes(t) {
+  const p = String(t || '').split(':');
+  const h = parseInt(p[0], 10), m = parseInt(p[1], 10);
+  if (isNaN(h) || isNaN(m)) return 0;
+  return h * 60 + m;
+}
+function segMinutes(segs) {
+  if (!Array.isArray(segs)) return 0;
+  return segs.reduce((s, seg) => {
+    if (!seg) return s;
+    const a = Array.isArray(seg) ? seg[0] : seg.start;
+    const b = Array.isArray(seg) ? seg[1] : seg.end;
+    let d = toMinutes(b) - toMinutes(a);
+    if (d < 0) d += 24 * 60;
+    return s + (d > 0 ? d : 0);
+  }, 0);
+}
+
+function migrateLegacyStores() {
+  let touched = false;
+
+  // 1) 记录：合并其它可能的历史键（旧版或手工备份留下的）
+  const main = loadData();
+  ['daily_tracker_data_backup', 'dailyTrackerData', 'daily-tracker-data', 'dt_data'].forEach(k => {
+    let alt = null;
+    try { alt = JSON.parse(localStorage.getItem(k) || 'null'); } catch { alt = null; }
+    if (!alt || typeof alt !== 'object' || Array.isArray(alt)) return;
+    Object.keys(alt).forEach(d => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !Array.isArray(alt[d])) return;
+      if (!Array.isArray(main[d])) { main[d] = alt[d]; touched = true; return; }
+      const ids = new Set(main[d].map(r => r && r.id));
+      alt[d].forEach(r => {
+        if (!r || (r.id != null && ids.has(r.id))) return;
+        main[d].push(r);
+        if (r.id != null) ids.add(r.id);
+        touched = true;
+      });
+    });
+  });
+
+  // 3) 多时段记录补时长
+  Object.keys(main).forEach(d => {
+    if (!Array.isArray(main[d])) return;
+    main[d].forEach(r => {
+      if (!r || !Array.isArray(r.segs) || !r.segs.length) return;
+      const sum = segMinutes(r.segs);
+      if (sum > 0 && Number(r.duration) !== sum) { r.duration = sum; touched = true; }
+    });
+  });
+  if (touched) localStorage.setItem(STORAGE_KEY, JSON.stringify(main));
+
+  // 2) 历史 meta：小结与天气
+  let meta = null;
+  try { meta = JSON.parse(localStorage.getItem('daily_tracker_meta') || 'null'); } catch { meta = null; }
+  if (meta && typeof meta === 'object') {
+    const sums = loadSummaries();
+    let sc = false;
+    const oldSums = meta.summaries || {};
+    Object.keys(oldSums).forEach(d => {
+      const s = oldSums[d];
+      if (!s || !s.text || sums[d]) return;
+      sums[d] = { text: s.text, edited: !!s.edited, updatedAt: s.updatedAt || Date.now() };
+      sc = true;
+    });
+    if (sc) localStorage.setItem(SUMMARY_KEY, JSON.stringify(sums));
+
+    const ws = loadWeatherStore();
+    let wc = false;
+    const oldW = meta.weather || {};
+    Object.keys(oldW).forEach(d => {
+      if (!oldW[d] || ws.days[d]) return;
+      ws.days[d] = oldW[d];
+      wc = true;
+    });
+    if (meta.settings && meta.settings.lat && meta.settings.lon && !ws.place) {
+      ws.place = {
+        lat: meta.settings.lat,
+        lon: meta.settings.lon,
+        name: meta.settings.name || '当前位置'
+      };
+      wc = true;
+    }
+    if (wc) saveWeatherStore(ws);
+  }
+
+  if (touched) schedulePush();
+}
 
 let beijingOffset = 8 * 60; // UTC+8 in minutes
 let now = new Date();
@@ -636,24 +1034,59 @@ function initStartTimes() {
 let startH, startM, endH, endM;
 let editingId = null;
 let listExpanded = false;
-let activeFilter = null;
 initStartTimes();
 
-function renderSubCategories() {
+function renderSubCategories(keepSub) {
   const catSel = document.getElementById('actCategory');
   const subSel = document.getElementById('actSub');
   const catKey = catSel.value;
-  const cat = categories[catKey];
-  const prev = subSel.value;
+  const cat = catInfo(catKey);
+  const prev = keepSub || subSel.value;
   subSel.innerHTML = '';
-  if (cat) {
-    Object.keys(cat.subs).forEach(subKey => {
-      const opt = document.createElement('option');
-      opt.value = subKey;
-      opt.textContent = `${cat.icon} ${cat.subs[subKey]}`;
-      subSel.appendChild(opt);
-    });
-    if (prev && cat.subs[prev]) subSel.value = prev;
+  if (!cat) return;
+  Object.keys(cat.subs).forEach(subKey => {
+    const opt = document.createElement('option');
+    opt.value = subKey;
+    opt.textContent = `${cat.icon} ${cat.subs[subKey]}`;
+    subSel.appendChild(opt);
+  });
+  // 编辑旧记录时，原二级已不在新目录里，临时补一个选项，保存后清理
+  if (keepSub && !cat.subs[keepSub]) {
+    const opt = document.createElement('option');
+    opt.value = keepSub;
+    opt.textContent = `${cat.icon} ${subNameOf(catKey, keepSub) || '其它'}（旧）`;
+    opt.dataset.temp = '1';
+    subSel.appendChild(opt);
+  }
+  if (prev) subSel.value = prev;
+  if (!subSel.value && subSel.options.length) subSel.selectedIndex = 0;
+}
+
+// 编辑旧分类记录时，把已下架的一级临时加回下拉
+function setCategoryForEdit(catKey, subKey) {
+  const catSel = document.getElementById('actCategory');
+  if (!categories[catKey]) {
+    const info = LEGACY_CATS[catKey] || { icon: '📌', name: catKey };
+    const opt = document.createElement('option');
+    opt.value = catKey;
+    opt.textContent = `${info.icon} ${info.name}（旧）`;
+    opt.dataset.temp = '1';
+    catSel.appendChild(opt);
+  }
+  catSel.value = catKey;
+  renderSubCategories(subKey);
+}
+
+// 清理临时选项；当前选中的是临时项时，回到第一个新分类
+function clearTempCategories() {
+  const catSel = document.getElementById('actCategory');
+  const temps = Array.prototype.slice.call(catSel.querySelectorAll('option[data-temp="1"]'));
+  if (!temps.length) return;
+  const wasSelected = temps.some(o => o.selected);
+  temps.forEach(o => o.remove());
+  if (wasSelected || !categories[catSel.value]) {
+    catSel.value = Object.keys(categories)[0];
+    renderSubCategories();
   }
 }
 
@@ -673,7 +1106,6 @@ function addActivity() {
   const name = document.getElementById('actName').value.trim();
   const category = document.getElementById('actCategory').value;
   const sub = document.getElementById('actSub').value;
-  if (!name) { alert('请输入做了什么'); return; }
 
   const start = String(startH).padStart(2,'0') + ':' + String(startM).padStart(2,'0');
   const end = String(endH).padStart(2,'0') + ':' + String(endM).padStart(2,'0');
@@ -685,7 +1117,16 @@ function addActivity() {
   if (editingId !== null) {
     const idx = data[currentDate].findIndex(a => a.id === editingId);
     if (idx !== -1) {
-      data[currentDate][idx] = { ...data[currentDate][idx], name, category, sub, start, end, duration };
+      const old = data[currentDate][idx];
+      const rec = { ...old, name, category, sub, start, end, duration };
+      // 老版多时段记录：时间没动就保留分段和原时长，动了才当成单段
+      if (Array.isArray(old.segs) && old.segs.length && old.start === start && old.end === end) {
+        rec.segs = old.segs;
+        rec.duration = segMinutes(old.segs) || duration;
+      } else {
+        delete rec.segs;
+      }
+      data[currentDate][idx] = rec;
     }
     editingId = null;
     document.getElementById('btnAdd').textContent = '+ 添加记录';
@@ -694,7 +1135,10 @@ function addActivity() {
     data[currentDate].push({ id: Date.now(), name, duration, category, sub, start, end });
   }
   saveData(data);
-  document.getElementById('actName').value = '';
+  const nameEl = document.getElementById('actName');
+  nameEl.value = '';
+  autoGrow(nameEl);
+  clearTempCategories();
   initStartTimes();
   renderAllPickers();
   render();
@@ -704,12 +1148,12 @@ function editActivity(id) {
   const act = getDayData(currentDate).find(a => a.id === id);
   if (!act) return;
   editingId = id;
-  document.getElementById('actName').value = act.name;
-  document.getElementById('actCategory').value = act.category;
-  renderSubCategories();
-  document.getElementById('actSub').value = act.sub || '';
-  const [sh, sm] = act.start.split(':').map(Number);
-  const [eh, em] = act.end.split(':').map(Number);
+  const nameEl = document.getElementById('actName');
+  nameEl.value = act.name || '';
+  autoGrow(nameEl);
+  setCategoryForEdit(act.category, act.sub || '');
+  const [sh, sm] = (act.start || '00:00').split(':').map(Number);
+  const [eh, em] = (act.end || '00:00').split(':').map(Number);
   startH = sh; startM = sm; endH = eh; endM = em;
   renderAllPickers();
   document.getElementById('btnAdd').textContent = '✓ 保存修改';
@@ -721,7 +1165,10 @@ function editActivity(id) {
 function cancelEdit() {
   if (editingId === null) return;
   editingId = null;
-  document.getElementById('actName').value = '';
+  const nameEl = document.getElementById('actName');
+  nameEl.value = '';
+  autoGrow(nameEl);
+  clearTempCategories();
   document.getElementById('btnAdd').textContent = '+ 添加记录';
   document.getElementById('btnAdd').classList.remove('btn-add-editing');
   initStartTimes();
@@ -768,128 +1215,50 @@ function changeDate(offset) {
   render();
 }
 
-// 状态栏过滤：点击卡片显示对应记录
-function getFilterLabel(filter) {
-  if (filter === 'sleep') return '😴 睡觉时长';
-  if (filter === 'work') return '💼 工作时长';
-  if (filter === 'top') return getTopCategoryName();
-  return null;
-}
-
-function getTopCategoryName() {
-  const activities = getDayData(currentDate);
-  const topCats = ['exercise', 'study', 'life', 'kid'];
-  const topRanks = topCats.map(k => ({
-    key: k,
-    min: activities.filter(a => a.category === k).reduce((s, a) => s + a.duration, 0)
-  })).sort((x, y) => y.min - x.min);
-  const top = topRanks[0];
-  return (top && top.min > 0) ? categories[top.key].name : null;
-}
-
-function setFilter(filter) {
-  activeFilter = (activeFilter === filter) ? null : filter;
-  render();
-}
-
 function render() {
   const activities = getDayData(currentDate);
   const isToday = currentDate === new Date().toISOString().slice(0, 10);
 
   const dateObj = new Date(currentDate);
   const weekdays = ['周日','周一','周二','周三','周四','周五','周六'];
-  const dateDisplayEl = document.getElementById('dateDisplay');
   document.getElementById('currentDate').textContent =
     `${dateObj.getMonth()+1}月${dateObj.getDate()}日 ${weekdays[dateObj.getDay()]}`;
-  let dateText = dateDisplayEl.querySelector('span');
-  if (!dateText) {
-    dateText = document.createElement('span');
-    dateDisplayEl.insertBefore(dateText, dateDisplayEl.firstChild);
-  }
-  dateText.textContent = isToday
+  document.getElementById('dateText').textContent = isToday
     ? '今天是 ' + new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
     : `${dateObj.getFullYear()}年${dateObj.getMonth()+1}月${dateObj.getDate()}日`;
+  renderWeather();
   renderCalendar(currentDate);
 
-  const totalMin = activities.reduce((s, a) => s + a.duration, 0);
   const workMin = activities.filter(a => a.category === 'work').reduce((s, a) => s + a.duration, 0);
-  document.getElementById('totalCount').textContent = activities.length;
-
-  const sleepMin = activities.filter(a => a.category === 'rest' && a.sub === 'sleep').reduce((s, a) => s + a.duration, 0);
-  document.getElementById('sleepHours').textContent = (sleepMin / 60).toFixed(1) + 'h';
-
-  const topCats = ['exercise', 'study', 'life', 'kid'];
-  const topRanks = topCats.map(k => ({
-    key: k,
-    min: activities.filter(a => a.category === k).reduce((s, a) => s + a.duration, 0)
-  })).sort((x, y) => y.min - x.min);
-  const top = topRanks[0];
-  if (top && top.min > 0) {
-    document.getElementById('topIcon').textContent = categories[top.key].icon;
-    document.getElementById('topHours').textContent = (top.min / 60).toFixed(1) + 'h';
-    document.getElementById('topLabel').textContent = categories[top.key].name;
-  } else {
-    document.getElementById('topIcon').textContent = '⏳';
-    document.getElementById('topHours').textContent = '0h';
-    document.getElementById('topLabel').textContent = '活跃域';
-  }
-
-  document.getElementById('workHours').textContent = (workMin / 60).toFixed(1) + 'h';
-
   const pct = Math.min(100, (workMin / 60 / GOAL_HOURS) * 100);
   document.getElementById('progressFill').style.width = pct + '%';
   document.getElementById('goalText').textContent = `有效工作 ${GOAL_HOURS} 小时 | 已完成 ${pct.toFixed(0)}%`;
 
   const list = document.getElementById('activityList');
 
-  // 状态栏高亮
-  document.getElementById('cardAll').classList.toggle('active', activeFilter === null);
-  document.getElementById('cardSleep').classList.toggle('active', activeFilter === 'sleep');
-  document.getElementById('cardWork').classList.toggle('active', activeFilter === 'work');
-  document.getElementById('cardTop').classList.toggle('active', activeFilter === 'top');
-
-  // 应用过滤
-  let shown = activities;
-  const filterLabel = getFilterLabel(activeFilter);
-  if (activeFilter === 'sleep') {
-    shown = activities.filter(a => a.category === 'rest' && a.sub === 'sleep');
-  } else if (activeFilter === 'work') {
-    shown = activities.filter(a => a.category === 'work');
-  } else if (activeFilter === 'top') {
-    const topCats = ['exercise', 'study', 'life', 'kid'];
-    const topRanks = topCats.map(k => ({
-      key: k,
-      min: activities.filter(a => a.category === k).reduce((s, a) => s + a.duration, 0)
-    })).sort((x, y) => y.min - x.min);
-    const top = topRanks[0];
-    if (top && top.min > 0) shown = activities.filter(a => a.category === top.key);
-  }
-
-  const sectionTitle = document.querySelector('.section-title');
-  sectionTitle.textContent = filterLabel ? `今日记录 · ${filterLabel}` : '今日记录';
-
-  if (shown.length === 0) {
-    list.innerHTML = filterLabel
-      ? '<div class="empty">该分类今天还没有记录</div>'
-      : '<div class="empty">今日事今日毕，早日住上大别墅 😊</div>';
+  if (activities.length === 0) {
+    list.innerHTML = '<div class="empty">今日事今日毕，早日住上大别墅 😊</div>';
+    syncSummaryAuto();
     return;
   }
-  const sorted = shown.slice().sort((a, b) => a.start.localeCompare(b.start));
+  const sorted = activities.slice().sort((a, b) => String(a.start || '').localeCompare(String(b.start || '')));
   const MAX_VISIBLE = 7;
   const hidden = listExpanded ? [] : sorted.slice(MAX_VISIBLE);
   const visible = listExpanded ? sorted : sorted.slice(0, MAX_VISIBLE);
   list.innerHTML = visible.map(a => {
-    const cat = categories[a.category];
-    const subName = cat && a.sub && cat.subs[a.sub] ? cat.subs[a.sub] : (cat ? '其它' : '');
-    const metaName = cat ? (subName ? `${cat.name}（${subName}）` : cat.name) : a.category;
+    const cat = catInfo(a.category);
+    const subName = subNameOf(a.category, a.sub);
+    const metaName = cat ? (subName ? `${cat.name}（${subName}）` : cat.name) : (a.category || '其它');
+    // 名称为空时，用二级分类名当标题
+    const title = (a.name && a.name.trim()) ? a.name : (subName || (cat ? cat.name : '未填写'));
     const isEditing = editingId === a.id;
     return `<div class="activity-item${isEditing ? ' editing' : ''}" data-id="${a.id}">
       <div class="activity-icon ${cat ? cat.cls : 'cat-other'}">${cat ? cat.icon : '📌'}</div>
       <div class="activity-info">
-        <div class="activity-name">${escapeHtml(a.name)}</div>
+        <div class="activity-name">${escapeHtml(title)}</div>
         <div class="activity-meta">${escapeHtml(metaName)}</div>
       </div>
-      <div class="activity-time">${a.start}-${a.end}<br><span style="color:#9b8ab5;font-size:0.75rem">(${formatDuration(a.duration)})</span></div>
+      <div class="activity-time">${actTimeLabel(a)}<br><span style="color:#9b8ab5;font-size:0.75rem">(${formatDuration(a.duration)})</span></div>
       <button class="btn-delete" onclick="event.stopPropagation();deleteActivity(${a.id})">✕</button>
     </div>`;
   }).join('');
@@ -900,6 +1269,136 @@ function render() {
     more.onclick = () => { listExpanded = !listExpanded; render(); };
     list.appendChild(more);
   }
+  syncSummaryAuto();
+}
+
+/* ===== 每日小结 ===== */
+function fmtLong(min) {
+  min = Math.max(0, Math.round(min || 0));
+  const h = Math.floor(min / 60), m = min % 60;
+  if (h && m) return `${h} 小时 ${m} 分`;
+  if (h) return `${h} 小时`;
+  return `${m} 分`;
+}
+
+function buildSummary(date) {
+  const acts = getDayData(date).slice().sort((a, b) =>
+    String(a.start || '').localeCompare(String(b.start || ''))
+  );
+  if (!acts.length) return '';
+
+  const total = acts.reduce((s, a) => s + (a.duration || 0), 0);
+  const firstStart = acts.reduce((p, a) => (a.start && a.start < p) ? a.start : p, acts[0].start || '');
+  const lastEnd = acts.reduce((p, a) => (a.end && a.end > p) ? a.end : p, acts[0].end || '');
+
+  const lines = [];
+  lines.push(`今天共记录 ${acts.length} 项事项，累计 ${fmtLong(total)}，时间从 ${firstStart} 到 ${lastEnd}。`);
+
+  // 分类与二级明细（只列有记录的）
+  const order = ['work', 'life', 'exercise', 'rest', 'study', 'kid'];
+  const catParts = [];
+  order.forEach(k => {
+    const list = acts.filter(a => a.category === k);
+    if (!list.length) return;
+    const min = list.reduce((s, a) => s + (a.duration || 0), 0);
+    const subMap = {};
+    list.forEach(a => {
+      const key = a.sub || '_';
+      subMap[key] = (subMap[key] || 0) + (a.duration || 0);
+    });
+    const subArr = Object.keys(subMap)
+      .map(key => ({ name: subNameOf(k, key === '_' ? '' : key) || '其它', min: subMap[key] }))
+      .sort((x, y) => y.min - x.min);
+    const subText = subArr.length > 1
+      ? `（${subArr.map(s => `${s.name} ${fmtLong(s.min)}`).join('、')}）`
+      : '';
+    const catName = catInfo(k) ? catInfo(k).name : k;
+    catParts.push(`${catName} ${fmtLong(min)}${subText}`);
+  });
+  // 不在新目录里的旧分类
+  const otherMap = {};
+  acts.filter(a => order.indexOf(a.category) === -1).forEach(a => {
+    otherMap[a.category] = (otherMap[a.category] || 0) + (a.duration || 0);
+  });
+  Object.keys(otherMap).forEach(k => {
+    const info = catInfo(k);
+    catParts.push(`${info ? info.name : k} ${fmtLong(otherMap[k])}`);
+  });
+  if (catParts.length) lines.push(`按类别看：${catParts.join('；')}。`);
+
+  // 事项先后顺序
+  const seqLimit = 10;
+  const seq = acts.slice(0, seqLimit).map(a => {
+    const label = (a.name && a.name.trim()) ? a.name : (subNameOf(a.category, a.sub) || '未填写');
+    return `${label}（${a.start}-${a.end}）`;
+  });
+  lines.push(`先后做了：${seq.join('；')}${acts.length > seqLimit ? ` 等 ${acts.length} 项` : ''}。`);
+
+  // 用时最长的一项
+  const longest = acts.reduce((p, a) => (a.duration || 0) > (p.duration || 0) ? a : p, acts[0]);
+  const longestName = (longest.name && longest.name.trim())
+    ? longest.name
+    : (subNameOf(longest.category, longest.sub) || '未填写');
+  lines.push(`用时最长的是${longestName}，${fmtLong(longest.duration)}。`);
+
+  return lines.join('');
+}
+
+let summaryTimer = null;
+
+function autoGrow(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 600) + 'px';
+}
+
+function onSummaryInput() {
+  const el = document.getElementById('summaryText');
+  autoGrow(el);
+  document.getElementById('summaryCount').textContent = `${el.value.length} 字`;
+  if (summaryTimer) clearTimeout(summaryTimer);
+  summaryTimer = setTimeout(() => {
+    const all = loadSummaries();
+    all[currentDate] = { text: el.value, edited: true, updatedAt: Date.now() };
+    saveSummaries(all);
+    document.getElementById('summaryMeta').textContent = '已保存（手动编辑）';
+  }, 700);
+}
+
+function syncSummaryAuto() {
+  const el = document.getElementById('summaryText');
+  if (!el) return;
+  const acts = getDayData(currentDate);
+  const all = loadSummaries();
+  const cur = all[currentDate];
+
+  if (!acts.length) {
+    el.value = cur ? (cur.text || '') : '';
+  } else if (!cur || !cur.edited) {
+    const text = buildSummary(currentDate);
+    if (!cur || cur.text !== text) {
+      all[currentDate] = { text, edited: false, updatedAt: Date.now() };
+      saveSummaries(all);
+    }
+    el.value = text;
+  } else {
+    el.value = cur.text || '';
+  }
+
+  autoGrow(el);
+  document.getElementById('summaryCount').textContent = `${el.value.length} 字`;
+  const now = loadSummaries()[currentDate];
+  document.getElementById('summaryMeta').textContent =
+    (now && now.edited) ? '手动编辑 · 记录变化不会覆盖' : '自动生成 · 可直接修改';
+}
+
+function regenSummary() {
+  if (!getDayData(currentDate).length) { alert('今天还没有记录，先添加一条吧'); return; }
+  if (!confirm('用当前记录重新生成小结？你手动改过的内容会被覆盖。')) return;
+  const all = loadSummaries();
+  all[currentDate] = { text: buildSummary(currentDate), edited: false, updatedAt: Date.now() };
+  saveSummaries(all);
+  syncSummaryAuto();
 }
 
 function formatDuration(min) {
@@ -909,6 +1408,18 @@ function formatDuration(min) {
     return m > 0 ? `${h}小时${m}分钟` : `${h}小时`;
   }
   return `${min}分钟`;
+}
+
+// 时间段文本：老版多时段记录（segs）多行显示，普通记录就是起止时间
+function actTimeLabel(a) {
+  if (a && Array.isArray(a.segs) && a.segs.length) {
+    const parts = a.segs.map(s => Array.isArray(s)
+      ? `${s[0] || ''}-${s[1] || ''}`
+      : `${s.start || ''}-${s.end || ''}`);
+    const valid = parts.filter(p => p && p !== '-');
+    if (valid.length) return valid.join('<br>');
+  }
+  return `${a.start || ''}-${a.end || ''}`;
 }
 
 function escapeHtml(str) {
@@ -1052,10 +1563,17 @@ function buildPicker(containerId, getH, getM, setH, setM) {
   update();
 }
 
-// 导出数据
+// 导出数据（记录 + 小结 + 天气，换设备不丢东西）
 function exportData() {
-  const data = loadData();
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const bundle = {
+    app: 'daily-tracker',
+    version: '2.2.0',
+    exportedAt: new Date().toISOString(),
+    data: loadData(),
+    summaries: loadSummaries(),
+    weather: loadWeatherStore()
+  };
+  const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -1071,14 +1589,87 @@ function importData(event) {
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      const data = JSON.parse(e.target.result);
-      if (typeof data === 'object' && data !== null) {
-        saveData(data);
-        render();
-        alert('数据导入成功！');
+      const raw = JSON.parse(e.target.result);
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('bad format');
+
+      // 三种格式都认：本版导出包 / 旧版纯记录 / v3 版导出包（raw.daily_tracker_data）
+      let incomingData = null, incomingSum = null, incomingW = null;
+      if (raw.raw && typeof raw.raw === 'object') {
+        incomingData = raw.raw.daily_tracker_data || {};
+        const meta = raw.raw.daily_tracker_meta || {};
+        incomingSum = meta.summaries || null;
+        if (meta.weather || meta.settings) {
+          incomingW = {
+            days: meta.weather || {},
+            place: (meta.settings && meta.settings.lat)
+              ? { lat: meta.settings.lat, lon: meta.settings.lon, name: meta.settings.name || '当前位置' }
+              : null
+          };
+        }
+      } else if (raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data)) {
+        incomingData = raw.data;
+        incomingSum = raw.summaries || null;
+        incomingW = raw.weather || null;
       } else {
-        alert('文件格式不正确');
+        incomingData = raw;
       }
+      if (!incomingData || typeof incomingData !== 'object' || Array.isArray(incomingData)) {
+        alert('文件格式不正确');
+        return;
+      }
+
+      const dayKeys = Object.keys(incomingData).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
+      const hasSum = incomingSum && Object.keys(incomingSum).length > 0;
+      if (!dayKeys.length && !hasSum) {
+        alert('这个文件里没有找到可导入的记录');
+        return;
+      }
+
+      // 记录：按日期合并，同 id 不重复加，本地原有记录一律保留
+      const local = loadData();
+      let added = 0;
+      dayKeys.forEach(d => {
+        const arr = Array.isArray(incomingData[d]) ? incomingData[d] : [];
+        if (!Array.isArray(local[d])) local[d] = [];
+        const ids = new Set(local[d].map(r => r && r.id));
+        arr.forEach(r => {
+          if (!r || typeof r !== 'object') return;
+          if (r.id != null && ids.has(r.id)) return;
+          local[d].push(r);
+          if (r.id != null) ids.add(r.id);
+          added++;
+        });
+      });
+      saveData(local);
+
+      // 小结：手动改过的优先，其次比更新时间
+      if (hasSum) {
+        const ls = loadSummaries();
+        Object.keys(incomingSum).forEach(d => {
+          const y = incomingSum[d];
+          if (!y) return;
+          const x = ls[d];
+          if (!x) { ls[d] = y; return; }
+          if (x.edited && !y.edited) return;
+          if (!x.edited && y.edited) { ls[d] = y; return; }
+          ls[d] = (y.updatedAt || 0) >= (x.updatedAt || 0) ? y : x;
+        });
+        localStorage.setItem(SUMMARY_KEY, JSON.stringify(ls));
+      }
+
+      // 天气：缺哪天补哪天，已有的不覆盖
+      if (incomingW && (incomingW.days || incomingW.place)) {
+        const ws = loadWeatherStore();
+        Object.keys(incomingW.days || {}).forEach(d => {
+          if (!ws.days[d] && incomingW.days[d]) ws.days[d] = incomingW.days[d];
+        });
+        if (!ws.place && incomingW.place) ws.place = incomingW.place;
+        saveWeatherStore(ws);
+      }
+
+      render();
+      fetchWeather(false);
+      alert(`导入完成：新增 ${added} 条记录，和本地数据合并，原有记录没有被覆盖。`);
     } catch {
       alert('文件解析失败，请确认是有效的 JSON 文件');
     }
@@ -1095,6 +1686,7 @@ function renderTime() {
 const GIST_ID_KEY = 'daily_tracker_gist_id';
 const GIST_TOKEN_KEY = 'daily_tracker_gist_token';
 const SYNC_FILE = 'daily-tracker-data.json';
+const SYNC_SUMMARY_FILE = 'daily-tracker-summary.json';
 let pushTimer = null;
 let lastSyncTime = 0;
 
@@ -1153,7 +1745,7 @@ function schedulePush() {
 
 function gistFileName(files) {
   if (files[SYNC_FILE]) return SYNC_FILE;
-  const keys = Object.keys(files);
+  const keys = Object.keys(files).filter(k => k !== SYNC_SUMMARY_FILE);
   return keys.length > 0 ? keys[0] : null;
 }
 
@@ -1181,6 +1773,21 @@ async function syncFromCloud(silent) {
     const local = loadData();
     const merged = mergeData(local, remote);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    // 小结文件（可选，老数据里没有）
+    if (files[SYNC_SUMMARY_FILE] && files[SYNC_SUMMARY_FILE].content) {
+      try {
+        const remoteSum = JSON.parse(files[SYNC_SUMMARY_FILE].content) || {};
+        const localSum = loadSummaries();
+        const mergedSum = {};
+        new Set([...Object.keys(localSum), ...Object.keys(remoteSum)]).forEach(d => {
+          const x = localSum[d], y = remoteSum[d];
+          if (!x) mergedSum[d] = y;
+          else if (!y) mergedSum[d] = x;
+          else mergedSum[d] = (y.updatedAt || 0) >= (x.updatedAt || 0) ? y : x;
+        });
+        localStorage.setItem(SUMMARY_KEY, JSON.stringify(mergedSum));
+      } catch (e) { /* 小结解析失败不影响主数据 */ }
+    }
     render();
     setSyncStatus('已从云端同步数据', 'ok');
   } catch (err) {
@@ -1207,6 +1814,7 @@ async function syncToCloud(silent) {
     const data = loadData();
     const body = { files: {} };
     body.files[SYNC_FILE] = { content: JSON.stringify(data, null, 2) };
+    body.files[SYNC_SUMMARY_FILE] = { content: JSON.stringify(loadSummaries(), null, 2) };
     const resp = await fetch('https://api.github.com/gists/' + cfg.id, {
       method: 'PATCH',
       headers: {
@@ -1345,10 +1953,22 @@ function renderAllPickers() {
   );
 }
 
+const nameInputEl = document.getElementById('actName');
+nameInputEl.addEventListener('input', () => autoGrow(nameInputEl));
+document.getElementById('summaryText').addEventListener('input', onSummaryInput);
+
+migrateLegacyStores();
 renderAllCategorySelects();
 renderAllPickers();
 loadSyncConfigIntoUI();
+// 已配置过城市就把城市名回填到设置里
+(function fillCityInput() {
+  const el = document.getElementById('weatherCity');
+  const p = loadWeatherStore().place;
+  if (el && p && p.name && p.name !== '当前位置') el.value = p.name;
+})();
 render();
+fetchWeather(false);
 syncFromCloud(true);
 
 // PWA：注册 Service Worker（安装到桌面 / 离线可用）
