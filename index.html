@@ -623,7 +623,7 @@ select { flex: 1; cursor: pointer; }
         <button class="btn-export" onclick="saveWeatherCity()" style="white-space:nowrap">保存</button>
         <button class="btn-export" onclick="useGeoLocation()" style="white-space:nowrap">定位</button>
       </div>
-      <div class="sync-tip" id="weatherTip">天气来自 Open-Meteo，不需要 Key。不填城市则优先用系统定位，定位不可用时默认南京。</div>
+      <div class="sync-tip" id="weatherTip">天气来自 Open-Meteo，不需要 Key。不填城市默认用南京；想按当前位置就点「定位」，会请求一次定位权限。</div>
       <div class="sub-title">云同步（GitHub Gist）</div>
       <div class="sync-box">
         <div class="sync-status" id="syncStatus">未配置 · 所有改动仅保存在本设备</div>
@@ -734,24 +734,9 @@ function saveWeatherStore(s) {
 let weatherFetching = false;
 let weatherFailed = false;
 
+// 取地点：只用已保存的地点或默认城市，不主动弹定位权限（要定位就在设置里点「定位」）
 async function resolvePlace(store) {
   if (store.place && store.place.lat && store.place.lon) return store.place;
-  try {
-    if (navigator.geolocation) {
-      const pos = await new Promise((res, rej) =>
-        navigator.geolocation.getCurrentPosition(res, rej, { timeout: 6000, maximumAge: 600000 })
-      );
-      const place = {
-        lat: Number(pos.coords.latitude.toFixed(4)),
-        lon: Number(pos.coords.longitude.toFixed(4)),
-        name: '当前位置'
-      };
-      const s = loadWeatherStore();
-      s.place = place;
-      saveWeatherStore(s);
-      return place;
-    }
-  } catch (e) { /* 定位不可用就用默认城市 */ }
   return DEFAULT_PLACE;
 }
 
