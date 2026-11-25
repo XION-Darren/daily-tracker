@@ -250,7 +250,7 @@ select { flex: 1; cursor: pointer; }
 .btn-regen:active { border-color: #a855f7; color: #c084fc; }
 .summary-text {
   width: 100%;
-  min-height: 96px;
+  min-height: 54px;
   resize: none;
   overflow: hidden;
   line-height: 1.7;
@@ -601,9 +601,9 @@ select { flex: 1; cursor: pointer; }
       <span class="summary-title">今日小结</span>
       <button class="btn-regen" onclick="regenSummary()">重新生成</button>
     </div>
-    <textarea id="summaryText" class="summary-text" rows="4" placeholder="记录完事项后会自动生成小结，也可以自己写。"></textarea>
+    <textarea id="summaryText" class="summary-text" rows="2" placeholder="写一句今天的感受。默认会填一句 30 字左右的草稿，直接改或全删都行。"></textarea>
     <div class="summary-foot">
-      <span id="summaryMeta">自动生成 · 可直接修改</span>
+      <span id="summaryMeta">草稿 · 改成自己的话</span>
       <span id="summaryCount">0 字</span>
     </div>
   </div>
@@ -1258,75 +1258,73 @@ function render() {
 }
 
 /* ===== 每日小结 ===== */
-function fmtLong(min) {
-  min = Math.max(0, Math.round(min || 0));
-  const h = Math.floor(min / 60), m = min % 60;
-  if (h && m) return `${h} 小时 ${m} 分`;
-  if (h) return `${h} 小时`;
-  return `${m} 分`;
-}
-
+/* 只给一句 30 字左右的当日感悟草稿：讲主次、松紧、时段、缺口
+   不罗列数据、不抄记录原文；用户改成自己的话后（edited=true）不再被自动覆盖 */
 function buildSummary(date) {
-  const acts = getDayData(date).slice().sort((a, b) =>
-    String(a.start || '').localeCompare(String(b.start || ''))
-  );
+  const acts = getDayData(date);
   if (!acts.length) return '';
 
   const total = acts.reduce((s, a) => s + (a.duration || 0), 0);
-  const firstStart = acts.reduce((p, a) => (a.start && a.start < p) ? a.start : p, acts[0].start || '');
-  const lastEnd = acts.reduce((p, a) => (a.end && a.end > p) ? a.end : p, acts[0].end || '');
+  if (!total) return '';
 
-  const lines = [];
-  lines.push(`今天共记录 ${acts.length} 项事项，累计 ${fmtLong(total)}，时间从 ${firstStart} 到 ${lastEnd}。`);
-
-  // 分类与二级明细（只列有记录的）
-  const order = ['work', 'life', 'exercise', 'rest', 'study', 'kid'];
-  const catParts = [];
-  order.forEach(k => {
-    const list = acts.filter(a => a.category === k);
-    if (!list.length) return;
-    const min = list.reduce((s, a) => s + (a.duration || 0), 0);
-    const subMap = {};
-    list.forEach(a => {
-      const key = a.sub || '_';
-      subMap[key] = (subMap[key] || 0) + (a.duration || 0);
-    });
-    const subArr = Object.keys(subMap)
-      .map(key => ({ name: subNameOf(k, key === '_' ? '' : key) || '其它', min: subMap[key] }))
-      .sort((x, y) => y.min - x.min);
-    const subText = subArr.length > 1
-      ? `（${subArr.map(s => `${s.name} ${fmtLong(s.min)}`).join('、')}）`
-      : '';
-    const catName = catInfo(k) ? catInfo(k).name : k;
-    catParts.push(`${catName} ${fmtLong(min)}${subText}`);
+  const catMap = new Map();
+  acts.forEach(a => {
+    const k = a.category || '_';
+    catMap.set(k, (catMap.get(k) || 0) + (a.duration || 0));
   });
-  // 不在新目录里的旧分类
-  const otherMap = {};
-  acts.filter(a => order.indexOf(a.category) === -1).forEach(a => {
-    otherMap[a.category] = (otherMap[a.category] || 0) + (a.duration || 0);
-  });
-  Object.keys(otherMap).forEach(k => {
-    const info = catInfo(k);
-    catParts.push(`${info ? info.name : k} ${fmtLong(otherMap[k])}`);
-  });
-  if (catParts.length) lines.push(`按类别看：${catParts.join('；')}。`);
+  const cats = [...catMap.entries()]
+    .map(([k, min]) => ({ name: catInfo(k) ? catInfo(k).name : k, min }))
+    .sort((x, y) => y.min - x.min);
 
-  // 事项先后顺序
-  const seqLimit = 10;
-  const seq = acts.slice(0, seqLimit).map(a => {
-    const label = (a.name && a.name.trim()) ? a.name : (subNameOf(a.category, a.sub) || '未填写');
-    return `${label}（${a.start}-${a.end}）`;
+  const buckets = [['上午', 0], ['下午', 0], ['晚上', 0]];
+  acts.forEach(a => {
+    const h = parseInt(String(a.start || '').split(':')[0], 10);
+    if (isNaN(h)) return;
+    buckets[h < 12 ? 0 : (h < 18 ? 1 : 2)][1] += (a.duration || 0);
   });
-  lines.push(`先后做了：${seq.join('；')}${acts.length > seqLimit ? ` 等 ${acts.length} 项` : ''}。`);
+  const active = buckets.filter(b => b[1] > 0);
+  const peak = active.length ? active.slice().sort((x, y) => y[1] - x[1])[0] : null;
 
-  // 用时最长的一项
-  const longest = acts.reduce((p, a) => (a.duration || 0) > (p.duration || 0) ? a : p, acts[0]);
-  const longestName = (longest.name && longest.name.trim())
-    ? longest.name
-    : (subNameOf(longest.category, longest.sub) || '未填写');
-  lines.push(`用时最长的是${longestName}，${fmtLong(longest.duration)}。`);
+  const hTxt = total >= 60 ? `${Math.round(total / 60)} 小时` : `${total} 分钟`;
+  const top = cats[0];
+  const topPct = Math.round(top.min / total * 100);
+  const restMin = (cats.find(c => c.name === '休息') || { min: 0 }).min;
+  const busy = total - restMin;   // 除休息以外的时长，用来判断忙不忙
 
-  return lines.join('');
+  // ① 主次
+  let a1;
+  if (cats.length === 1) a1 = `${hTxt}全在${top.name}上`;
+  else if (topPct >= 75) a1 = `${hTxt}里${top.name}占了大头`;
+  else if (topPct >= 50) a1 = `${hTxt}以${top.name}为主`;
+  else a1 = `${hTxt}里几摊事分得比较散`;
+
+  // ② 松紧（只算休息以外的时长，纯休息日不提）
+  let a2 = '';
+  if (busy >= 480) a2 = '排得挺满';
+  else if (busy >= 270) a2 = '节奏还行';
+  else if (busy > 0) a2 = '不算忙';
+
+  // ③ 时段
+  let a3 = '';
+  if (active.length === 1) a3 = `只在${active[0][0]}有记录`;
+  else if (peak && peak[1] / total >= 0.6) a3 = `重心在${peak[0]}`;
+
+  // ④ 缺口或亮点（避开与①重复）
+  let a4 = '';
+  const hasExer = cats.some(c => c.name === '运动');
+  if (cats.length > 1 && restMin / total >= 0.35) a4 = '休息给得足';
+  else if (busy >= 300 && top.name !== '休息' && !restMin) a4 = '休息没顾上';
+  else if (busy >= 300 && top.name !== '休息' && top.name !== '运动' && !hasExer) a4 = '没怎么动';
+
+  // 拼到 38 字为止，放不下就丢后面的
+  let s = '';
+  [a1, a2, a3, a4].forEach(p => {
+    if (!p) return;
+    const next = s ? s + '，' + p : p;
+    if (next.length > 38) return;
+    s = next;
+  });
+  return s ? s + '。' : '';
 }
 
 let summaryTimer = null;
@@ -1346,7 +1344,7 @@ function onSummaryInput() {
     const all = loadSummaries();
     all[currentDate] = { text: el.value, edited: true, updatedAt: Date.now() };
     saveSummaries(all);
-    document.getElementById('summaryMeta').textContent = '已保存（手动编辑）';
+    document.getElementById('summaryMeta').textContent = el.value.trim() ? '已保存 · 不会被覆盖' : '空着写 · 不会被覆盖';
   }, 700);
 }
 
@@ -1373,13 +1371,17 @@ function syncSummaryAuto() {
   autoGrow(el);
   document.getElementById('summaryCount').textContent = `${el.value.length} 字`;
   const now = loadSummaries()[currentDate];
-  document.getElementById('summaryMeta').textContent =
-    (now && now.edited) ? '手动编辑 · 记录变化不会覆盖' : '自动生成 · 可直接修改';
+  const metaEl = document.getElementById('summaryMeta');
+  if (now && now.edited) {
+    metaEl.textContent = el.value.trim() ? '已保存 · 不会被覆盖' : '空着写 · 不会被覆盖';
+  } else {
+    metaEl.textContent = '草稿 · 改成自己的话';
+  }
 }
 
 function regenSummary() {
   if (!getDayData(currentDate).length) { alert('今天还没有记录，先添加一条吧'); return; }
-  if (!confirm('用当前记录重新生成小结？你手动改过的内容会被覆盖。')) return;
+  if (!confirm('重新生成一句草稿？你写的内容会被覆盖。')) return;
   const all = loadSummaries();
   all[currentDate] = { text: buildSummary(currentDate), edited: false, updatedAt: Date.now() };
   saveSummaries(all);
